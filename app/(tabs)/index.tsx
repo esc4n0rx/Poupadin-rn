@@ -1,75 +1,128 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { CustomStatusBar } from '@/components/CustomStatusBar';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { COLORS, SIZES } from '@/constants/Theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const handleLogout = () => {
+    logout();
+    router.replace('/(auth)/welcome');
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+    <View style={styles.container}>
+      <CustomStatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
+      
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <ThemedText type="title" style={styles.welcomeText}>
+          Olá, {user?.fullName || 'Usuário'}! 👋
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+        <ThemedText style={styles.subtitle}>
+          Bem-vindo ao Poupadin
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+      </View>
+
+      <View style={styles.content}>
+        <ThemedText style={styles.description}>
+          Seu app de gerenciamento financeiro está pronto para uso!
         </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        
+        <View style={styles.userInfo}>
+          <ThemedText style={styles.infoLabel}>Email:</ThemedText>
+          <ThemedText style={styles.infoValue}>{user?.email}</ThemedText>
+          
+          <ThemedText style={styles.infoLabel}>Telefone:</ThemedText>
+          <ThemedText style={styles.infoValue}>{user?.mobileNumber}</ThemedText>
+          
+          <ThemedText style={styles.infoLabel}>Data de Nascimento:</ThemedText>
+          <ThemedText style={styles.infoValue}>{user?.dateOfBirth}</ThemedText>
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Sair</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
-  stepContainer: {
-    gap: 8,
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 40,
+    paddingHorizontal: SIZES.paddingHorizontal,
+    borderBottomLeftRadius: SIZES.radiusLarge,
+    borderBottomRightRadius: SIZES.radiusLarge,
+  },
+  welcomeText: {
+    color: COLORS.white,
+    textAlign: 'center',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    color: COLORS.white,
+    textAlign: 'center',
+    opacity: 0.9,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: SIZES.paddingHorizontal,
+    paddingTop: 30,
+  },
+  description: {
+    textAlign: 'center',
+    marginBottom: 40,
+    fontSize: SIZES.body1,
+    color: COLORS.textLight,
+  },
+  userInfo: {
+    backgroundColor: COLORS.white,
+    padding: 20,
+    borderRadius: SIZES.radius,
+    marginBottom: 30,
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoLabel: {
+    fontSize: SIZES.body3,
+    color: COLORS.textLight,
+    marginBottom: 4,
+    marginTop: 12,
+  },
+  infoValue: {
+    fontSize: SIZES.body2,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  logoutButton: {
+    backgroundColor: COLORS.error,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: SIZES.radius,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  logoutButtonText: {
+    color: COLORS.white,
+    fontSize: SIZES.body1,
+    fontWeight: '600',
   },
 });
