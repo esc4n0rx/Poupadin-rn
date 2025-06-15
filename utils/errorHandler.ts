@@ -1,5 +1,5 @@
 // utils/errorHandler.ts
-export const getErrorMessage = (error: any): string => {
+export const getErrorMessage = (error: any, p0: string): string => {
   if (error?.message) {
     return error.message;
   }

@@ -4,6 +4,9 @@ import { BudgetSetupData } from '@/types/budget';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 class BudgetService {
+  setupBudget(budgetData: BudgetSetupData) {
+      throw new Error('Method not implemented.');
+  }
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     

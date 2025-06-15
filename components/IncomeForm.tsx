@@ -1,17 +1,10 @@
-// components/IncomeForm.tsx
 import { CustomButton } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
 import { COLORS, SIZES } from '@/constants/Theme';
 import { Income } from '@/types/budget';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import {
-    Animated,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface IncomeFormProps {
   incomes: Income[];
@@ -30,31 +23,17 @@ export const IncomeForm: React.FC<IncomeFormProps> = ({
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const slideAnim = new Animated.Value(0);
-
-  React.useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: showForm ? 1 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [showForm]);
-
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
-
-    if (!formData.description.trim() || formData.description.length < 3) {
-      newErrors.description = 'Descrição deve ter pelo menos 3 caracteres';
+    if (!formData.description) {
+      newErrors.description = 'A descrição é obrigatória.';
     }
-
-    if (!formData.amount || formData.amount <= 0) {
-      newErrors.amount = 'Valor deve ser maior que zero';
+    if (formData.amount <= 0) {
+      newErrors.amount = 'O valor deve ser maior que zero.';
     }
-
-    if (!formData.receive_day || formData.receive_day < 1 || formData.receive_day > 31) {
-      newErrors.receive_day = 'Dia deve estar entre 1 e 31';
+    if (formData.receive_day < 1 || formData.receive_day > 31) {
+      newErrors.receive_day = 'O dia deve ser entre 1 e 31.';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -64,7 +43,7 @@ export const IncomeForm: React.FC<IncomeFormProps> = ({
 
     const newIncome: Income = {
       ...formData,
-      id: Date.now().toString(),
+      id: Date.now().toString(), // ID temporário para a lista no frontend
     };
 
     onIncomesChange([...incomes, newIncome]);
@@ -74,40 +53,22 @@ export const IncomeForm: React.FC<IncomeFormProps> = ({
   };
 
   const handleRemoveIncome = (id: string) => {
-    onIncomesChange(incomes.filter(income => income.id !== id));
+    onIncomesChange(incomes.filter((income) => income.id !== id));
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Suas Rendas 💰</Text>
       <Text style={styles.sectionSubtitle}>
-        Adicione todas as suas fontes de renda mensais
+        Adicione todas as suas fontes de renda mensais.
       </Text>
 
-      {/* Lista de rendas existentes */}
       {incomes.map((income) => (
-        <Animated.View
-          key={income.id}
-          style={[
-            styles.incomeItem,
-            {
-              opacity: slideAnim,
-              transform: [{
-                translateX: slideAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-50, 0],
-                }),
-              }],
-            },
-          ]}
-        >
+        <View key={income.id} style={styles.incomeItem}>
           <View style={styles.incomeInfo}>
             <Text style={styles.incomeDescription}>{income.description}</Text>
             <Text style={styles.incomeAmount}>{formatCurrency(income.amount)}</Text>
@@ -119,81 +80,60 @@ export const IncomeForm: React.FC<IncomeFormProps> = ({
           >
             <Ionicons name="trash-outline" size={20} color={COLORS.error} />
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       ))}
 
-      {/* Formulário para adicionar nova renda */}
       {showForm && (
-        <Animated.View
-          style={[
-            styles.formContainer,
-            {
-              opacity: slideAnim,
-              height: slideAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 280],
-              }),
-            },
-          ]}
-        >
+        <View style={styles.formContainer}>
           <CustomInput
             label="Descrição da Renda"
             placeholder="Ex: Salário, Freelance, Aluguel..."
             value={formData.description}
             onChangeText={(value) => {
-              setFormData(prev => ({ ...prev, description: value }));
-              setErrors(prev => ({ ...prev, description: '' }));
+              setFormData((prev) => ({ ...prev, description: value }));
+              if (errors.description) setErrors((prev) => ({ ...prev, description: '' }));
             }}
             error={errors.description}
           />
-
           <CustomInput
             label="Valor"
             placeholder="0,00"
             value={formData.amount > 0 ? formData.amount.toString() : ''}
             onChangeText={(value) => {
               const numericValue = parseFloat(value.replace(',', '.')) || 0;
-              setFormData(prev => ({ ...prev, amount: numericValue }));
-              setErrors(prev => ({ ...prev, amount: '' }));
+              setFormData((prev) => ({ ...prev, amount: numericValue }));
+              if (errors.amount) setErrors((prev) => ({ ...prev, amount: '' }));
             }}
             keyboardType="numeric"
             error={errors.amount}
           />
-
           <CustomInput
             label="Dia do Recebimento"
             placeholder="1"
             value={formData.receive_day.toString()}
             onChangeText={(value) => {
-              const numericValue = parseInt(value) || 1;
-              setFormData(prev => ({ ...prev, receive_day: numericValue }));
-              setErrors(prev => ({ ...prev, receive_day: '' }));
+              const numericValue = parseInt(value, 10) || 1;
+              setFormData((prev) => ({ ...prev, receive_day: numericValue }));
+              if (errors.receive_day) setErrors((prev) => ({ ...prev, receive_day: '' }));
             }}
             keyboardType="numeric"
             error={errors.receive_day}
           />
-
           <View style={styles.formButtons}>
             <CustomButton
               title="Cancelar"
               onPress={() => {
                 setShowForm(false);
-                setFormData({ description: '', amount: 0, receive_day: 1 });
                 setErrors({});
               }}
               variant="outline"
               style={styles.cancelButton}
             />
-            <CustomButton
-              title="Adicionar"
-              onPress={handleAddIncome}
-              style={styles.addButton}
-            />
+            <CustomButton title="Adicionar" onPress={handleAddIncome} style={styles.addButton} />
           </View>
-        </Animated.View>
+        </View>
       )}
 
-      {/* Botão para mostrar formulário */}
       {!showForm && (
         <TouchableOpacity
           style={styles.addIncomeButton}
@@ -209,64 +149,78 @@ export const IncomeForm: React.FC<IncomeFormProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 30,
+    marginBottom: SIZES.padding * 2,
   },
   sectionTitle: {
-    fontSize: SIZES.h4,
+    fontSize: SIZES.h3,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   sectionSubtitle: {
-    fontSize: SIZES.body3,
+    fontSize: SIZES.body4,
     color: COLORS.textLight,
     marginBottom: 20,
   },
   incomeItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: COLORS.white,
     padding: 16,
     borderRadius: SIZES.radius,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
   },
   incomeInfo: {
     flex: 1,
   },
   incomeDescription: {
-    fontSize: SIZES.body2,
-    fontWeight: '600',
+    fontSize: SIZES.body3,
+    fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 4,
   },
   incomeAmount: {
-    fontSize: SIZES.body1,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 2,
+    fontSize: SIZES.body3,
+    color: COLORS.success,
+    fontWeight: '600',
+    marginTop: 4,
   },
   incomeDay: {
     fontSize: SIZES.body4,
     color: COLORS.textLight,
+    marginTop: 4,
   },
   removeButton: {
     padding: 8,
+  },
+  addIncomeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: SIZES.radius,
+    backgroundColor: COLORS.secondary,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+  },
+  addIncomeText: {
+    marginLeft: 8,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    fontSize: SIZES.body3,
   },
   formContainer: {
     backgroundColor: COLORS.secondary,
     padding: 16,
     borderRadius: SIZES.radius,
     marginBottom: 12,
-    overflow: 'hidden',
   },
   formButtons: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
     gap: 12,
   },
   cancelButton: {
@@ -274,22 +228,5 @@ const styles = StyleSheet.create({
   },
   addButton: {
     flex: 1,
-  },
-  addIncomeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    padding: 16,
-    borderRadius: SIZES.radius,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderStyle: 'dashed',
-  },
-  addIncomeText: {
-    fontSize: SIZES.body2,
-    color: COLORS.primary,
-    fontWeight: '600',
-    marginLeft: 8,
   },
 });

@@ -1,20 +1,23 @@
-// app/(tabs)/budget-setup.tsx
 import { CategoryForm } from '@/components/CategoryForm';
 import { CustomButton } from '@/components/CustomButton';
 import { CustomStatusBar } from '@/components/CustomStatusBar';
 import { IncomeForm } from '@/components/IncomeForm';
 import { COLORS, SIZES } from '@/constants/Theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { budgetService } from '@/services/budgetService';
 import { BudgetSetupData, Category, Income } from '@/types/budget';
+import { getErrorMessage } from '@/utils/errorHandler';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
     Animated,
+    KeyboardAvoidingView, // Adicionado
+    Platform, // Adicionado
     ScrollView,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,52 +25,43 @@ export default function BudgetSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, updateSetupStatus } = useAuth();
-  
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  
-  const fadeAnim = new Animated.Value(1);
-  const slideAnim = new Animated.Value(0);
+
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
 
   const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
   const totalAllocated = categories.reduce((sum, cat) => sum + cat.allocated_amount, 0);
 
   const animateStep = (toStep: number) => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: toStep === 1 ? 0 : toStep === 2 ? -1 : -2,
-        duration: 300,
-        useNativeDriver: true,
-      }),
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentStep(toStep);
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 200,
+        duration: 150,
         useNativeDriver: true,
-      }),
-    ]).start();
-    setCurrentStep(toStep);
+      }).start();
+    });
   };
 
   const handleNextStep = () => {
-    if (currentStep === 1) {
-      if (incomes.length === 0) {
-        Alert.alert('Atenção', 'Adicione pelo menos uma fonte de renda para continuar.');
-        return;
-      }
-      animateStep(2);
-    } else if (currentStep === 2) {
-      if (categories.length === 0) {
-        Alert.alert('Atenção', 'Adicione pelo menos uma categoria de gastos para continuar.');
-        return;
-      }
-      animateStep(3);
+    if (currentStep === 1 && incomes.length === 0) {
+      Alert.alert('Renda Necessária', 'Você precisa adicionar pelo menos uma fonte de renda para continuar.');
+      return;
+    }
+    if (currentStep === 2 && categories.length === 0) {
+      Alert.alert('Categoria Necessária', 'Você precisa adicionar pelo menos uma categoria de gastos.');
+      return;
+    }
+    if (currentStep < 3) {
+      animateStep(currentStep + 1);
     }
   };
 
@@ -78,115 +72,56 @@ export default function BudgetSetupScreen() {
   };
 
   const handleFinishSetup = async () => {
-    if (categories.length === 0) {
-      Alert.alert('Atenção', 'Adicione pelo menos uma categoria de gastos.');
+    if (totalAllocated > totalIncome) {
+      Alert.alert('Erro no Orçamento', 'O valor total alocado nas categorias não pode ser maior que a sua renda total.');
+      return;
+    }
+    if (!user) {
+      Alert.alert('Erro', 'Usuário não encontrado. Por favor, faça login novamente.');
       return;
     }
 
     setIsLoading(true);
-    try {
-      const setupData: BudgetSetupData = {
-        name: `Orçamento de ${user?.name}`,
-        incomes: incomes.map(income => ({
-          description: income.description,
-          amount: income.amount,
-          receive_day: income.receive_day,
-        })),
-        categories: categories.map(category => ({
-          name: category.name,
-          allocated_amount: category.allocated_amount,
-          color: category.color,
-        })),
-      };
 
-      // Simular sucesso por enquanto - substitua pela chamada real da API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Atualizar o status do setup
+    const budgetData: BudgetSetupData = {
+        incomes: incomes.map(({ id, ...rest }) => rest), // Remove ID temporário do frontend
+        categories: categories.map(({ id, ...rest }) => rest),
+        name: ''
+    };
+
+    try {
+      budgetService.setupBudget(budgetData);
+      Alert.alert('Sucesso!', 'Seu orçamento foi configurado com sucesso.');
       await updateSetupStatus();
-      
-      Alert.alert(
-        'Parabéns! 🎉',
-        'Seu orçamento foi criado com sucesso! Agora você pode começar a controlar suas finanças.',
-        [
-          {
-            text: 'Continuar',
-            onPress: () => {
-              router.replace('/(tabs)');
-            }
-          }
-        ]
-      );
+      router.replace('/(tabs)');
     } catch (error) {
-      Alert.alert('Erro', error instanceof Error ? error.message : 'Erro ao criar orçamento');
+      getErrorMessage(error, 'Não foi possível finalizar a configuração.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
+    <View style={styles.stepIndicatorContainer}>
       {[1, 2, 3].map((step) => (
-        <View key={step} style={styles.stepContainer}>
-          <View style={[
-            styles.stepCircle,
-            currentStep >= step && styles.stepCircleActive,
-          ]}>
-            <Text style={[
-              styles.stepNumber,
-              currentStep >= step && styles.stepNumberActive,
-            ]}>
-              {step}
-            </Text>
+        <React.Fragment key={step}>
+          <View style={[styles.stepDot, currentStep >= step && styles.stepDotActive]}>
+            <Text style={[styles.stepText, currentStep >= step && styles.stepTextActive]}>{step}</Text>
           </View>
-          <Text style={[
-            styles.stepLabel,
-            currentStep >= step && styles.stepLabelActive,
-          ]}>
-            {step === 1 ? 'Rendas' : step === 2 ? 'Categorias' : 'Revisão'}
-          </Text>
-        </View>
+          {step < 3 && <View style={[styles.stepLine, currentStep > step && styles.stepLineActive]} />}
+        </React.Fragment>
       ))}
     </View>
   );
 
   const renderStep1 = () => (
-    <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepTitle}>Vamos começar! 🚀</Text>
-        <Text style={styles.stepDescription}>
-          Primeiro, me conte sobre suas fontes de renda mensais
-        </Text>
-      </View>
-      
-      <IncomeForm
-        incomes={incomes}
-        onIncomesChange={setIncomes}
-      />
-
-      {incomes.length > 0 && (
-        <View style={styles.summaryBox}>
-          <Text style={styles.summaryTitle}>Renda Total Mensal</Text>
-          <Text style={styles.summaryAmount}>
-            {new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            }).format(totalIncome)}
-          </Text>
-        </View>
-      )}
+    <Animated.View style={{ opacity: fadeAnim }}>
+      <IncomeForm incomes={incomes} onIncomesChange={setIncomes} />
     </Animated.View>
   );
 
   const renderStep2 = () => (
-    <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepTitle}>Ótimo! 📊</Text>
-        <Text style={styles.stepDescription}>
-          Agora vamos organizar seus gastos em categorias
-        </Text>
-      </View>
-      
+    <Animated.View style={{ opacity: fadeAnim }}>
       <CategoryForm
         categories={categories}
         onCategoriesChange={setCategories}
@@ -196,113 +131,54 @@ export default function BudgetSetupScreen() {
   );
 
   const renderStep3 = () => (
-    <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepTitle}>Quase lá! 🎯</Text>
-        <Text style={styles.stepDescription}>
-          Revise seu orçamento antes de finalizar
+    <Animated.View style={[styles.summaryContainer, { opacity: fadeAnim }]}>
+      <Text style={styles.summaryTitle}>Resumo do Orçamento</Text>
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryLabel}>Renda Total Mensal:</Text>
+        <Text style={styles.summaryValueIncome}>
+          {totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
         </Text>
       </View>
-
-      <View style={styles.reviewContainer}>
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>💰 Rendas ({incomes.length})</Text>
-          {incomes.map((income) => (
-            <View key={income.id} style={styles.reviewItem}>
-              <Text style={styles.reviewItemName}>{income.description}</Text>
-              <Text style={styles.reviewItemValue}>
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                }).format(income.amount)}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>📊 Categorias ({categories.length})</Text>
-          {categories.map((category) => (
-            <View key={category.id} style={styles.reviewItem}>
-              <View style={styles.reviewItemNameContainer}>
-                <View style={[styles.categoryColorDot, { backgroundColor: category.color }]} />
-                <Text style={styles.reviewItemName}>{category.name}</Text>
-              </View>
-              <Text style={styles.reviewItemValue}>
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                }).format(category.allocated_amount)}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.finalSummary}>
-          <View style={styles.finalSummaryItem}>
-            <Text style={styles.finalSummaryLabel}>Renda Total</Text>
-            <Text style={styles.finalSummaryValue}>
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              }).format(totalIncome)}
-            </Text>
-          </View>
-          <View style={styles.finalSummaryItem}>
-            <Text style={styles.finalSummaryLabel}>Total Alocado</Text>
-            <Text style={[styles.finalSummaryValue, { color: COLORS.error }]}>
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              }).format(totalAllocated)}
-            </Text>
-          </View>
-          <View style={styles.finalSummaryItem}>
-            <Text style={styles.finalSummaryLabel}>Sobra/Reserva</Text>
-            <Text style={[styles.finalSummaryValue, { color: COLORS.success }]}>
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              }).format(totalIncome - totalAllocated)}
-            </Text>
-          </View>
-        </View>
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryLabel}>Total Alocado nas Categorias:</Text>
+        <Text style={styles.summaryValueAllocated}>
+          {totalAllocated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        </Text>
       </View>
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryLabel}>Valor Restante:</Text>
+        <Text style={styles.summaryValueRemaining}>
+          {(totalIncome - totalAllocated).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        </Text>
+      </View>
+      {totalAllocated > totalIncome && (
+        <Text style={styles.warningText}>Atenção: Você alocou mais dinheiro do que sua renda!</Text>
+      )}
     </Animated.View>
   );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <CustomStatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
-      
+
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerTitle}>Configurar Orçamento</Text>
         {renderStepIndicator()}
       </View>
 
       <View style={styles.content}>
-        <Animated.View
-          style={[
-            styles.scrollContainer,
-            {
-              transform: [{
-                translateX: slideAnim.interpolate({
-                  inputRange: [-2, -1, 0],
-                  outputRange: [0, 0, 0],
-                }),
-              }],
-            },
-          ]}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
-          </ScrollView>
-        </Animated.View>
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+        </ScrollView>
 
         <View style={styles.navigation}>
           {currentStep > 1 && (
@@ -313,7 +189,7 @@ export default function BudgetSetupScreen() {
               style={styles.backButton}
             />
           )}
-          
+
           {currentStep < 3 ? (
             <CustomButton
               title="Próximo"
@@ -330,7 +206,7 @@ export default function BudgetSetupScreen() {
           )}
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -341,56 +217,50 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 30,
     paddingHorizontal: SIZES.paddingHorizontal,
-    borderBottomLeftRadius: SIZES.radiusLarge,
-    borderBottomRightRadius: SIZES.radiusLarge,
+    paddingBottom: 40,
   },
   headerTitle: {
-    fontSize: SIZES.h3,
-    fontWeight: 'bold',
     color: COLORS.white,
+    fontSize: SIZES.h2,
+    fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
   },
-  stepIndicator: {
+  stepIndicatorContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  stepContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  stepCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.white,
-    opacity: 0.3,
+  stepDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: COLORS.gray,
   },
-  stepCircleActive: {
-    opacity: 1,
-    backgroundColor: COLORS.white,
+  stepDotActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.white,
   },
-  stepNumber: {
-    fontSize: SIZES.body2,
+  stepText: {
+    color: COLORS.gray,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
-  stepNumberActive: {
-    color: COLORS.primary,
-  },
-  stepLabel: {
-    fontSize: SIZES.body4,
+  stepTextActive: {
     color: COLORS.white,
-    opacity: 0.7,
   },
-  stepLabelActive: {
-    opacity: 1,
-    fontWeight: '600',
+  stepLine: {
+    flex: 1,
+    height: 3,
+    backgroundColor: COLORS.gray,
+    marginHorizontal: -2,
+  },
+  stepLineActive: {
+    backgroundColor: COLORS.primary,
   },
   content: {
     flex: 1,
@@ -398,134 +268,75 @@ const styles = StyleSheet.create({
     marginTop: -20,
     borderTopLeftRadius: SIZES.radiusLarge,
     borderTopRightRadius: SIZES.radiusLarge,
-  },
-  scrollContainer: {
-    flex: 1,
+    overflow: 'hidden',
   },
   scrollContent: {
     paddingHorizontal: SIZES.paddingHorizontal,
     paddingTop: 30,
     paddingBottom: 20,
   },
-  stepContent: {
-    flex: 1,
-  },
-  stepHeader: {
-    marginBottom: 30,
-    alignItems: 'center',
-  },
-  stepTitle: {
-    fontSize: SIZES.h3,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  stepDescription: {
-    fontSize: SIZES.body2,
-    color: COLORS.textLight,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  summaryBox: {
-    backgroundColor: COLORS.primary,
-    padding: 20,
-    borderRadius: SIZES.radius,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  summaryTitle: {
-    fontSize: SIZES.body2,
-    color: COLORS.white,
-    marginBottom: 8,
-    opacity: 0.9,
-  },
-  summaryAmount: {
-    fontSize: SIZES.h2,
-    fontWeight: 'bold',
-    color: COLORS.white,
-  },
-  reviewContainer: {
-    gap: 20,
-  },
-  reviewSection: {
-    backgroundColor: COLORS.white,
-    padding: 16,
-    borderRadius: SIZES.radius,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  reviewSectionTitle: {
-    fontSize: SIZES.body1,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  reviewItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.grayLight,
-  },
-  reviewItemNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  categoryColorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  reviewItemName: {
-    fontSize: SIZES.body2,
-    color: COLORS.text,
-    flex: 1,
-  },
-  reviewItemValue: {
-    fontSize: SIZES.body2,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  finalSummary: {
-    backgroundColor: COLORS.secondary,
-    padding: 20,
-    borderRadius: SIZES.radius,
-    gap: 12,
-  },
-  finalSummaryItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  finalSummaryLabel: {
-    fontSize: SIZES.body1,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  finalSummaryValue: {
-    fontSize: SIZES.body1,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   navigation: {
     flexDirection: 'row',
     paddingHorizontal: SIZES.paddingHorizontal,
     paddingVertical: 20,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
     gap: 12,
+    backgroundColor: COLORS.background,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.inputBorder,
   },
   backButton: {
     flex: 1,
   },
   nextButton: {
     flex: 2,
+    marginLeft: 'auto',
   },
   finishButton: {
-    flex: 1,
+    flex: 2,
+    marginLeft: 'auto',
+  },
+  summaryContainer: {
+    backgroundColor: COLORS.white,
+    padding: SIZES.padding,
+    borderRadius: SIZES.radius,
+  },
+  summaryTitle: {
+    fontSize: SIZES.h3,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  summaryBox: {
+    backgroundColor: COLORS.secondary,
+    padding: SIZES.padding,
+    borderRadius: SIZES.radius,
+    marginBottom: 12,
+  },
+  summaryLabel: {
+    fontSize: SIZES.body3,
+    color: COLORS.text,
+  },
+  summaryValueIncome: {
+    fontSize: SIZES.h3,
+    fontWeight: 'bold',
+    color: COLORS.success,
+  },
+  summaryValueAllocated: {
+    fontSize: SIZES.h3,
+    fontWeight: 'bold',
+    color: COLORS.error,
+  },
+  summaryValueRemaining: {
+    fontSize: SIZES.h3,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  warningText: {
+    color: COLORS.error,
+    textAlign: 'center',
+    marginTop: 10,
+    fontWeight: 'bold',
   },
 });
