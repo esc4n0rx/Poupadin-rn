@@ -1,120 +1,124 @@
-import { LoginFormData, RegisterFormData, User } from '@/types/auth';
+// contexts/AuthContext.tsx
+import { apiService } from '@/services/api';
+import { AuthContextType, LoginFormData, RegisterFormData, User } from '@/types/auth';
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-interface AuthContextType {
-  user: User | null;
-  login: (data: LoginFormData) => Promise<void>;
-  register: (data: RegisterFormData) => Promise<void>;
-  logout: () => void;
-  isLoading: boolean;
-  forgotPassword: (email: string) => Promise<void>;
-  verifyResetCode: (email: string, code: string) => Promise<void>;
-  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-}
+import { Alert } from 'react-native';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Carregar usuário do storage ao inicializar
+  // Verificar se existe token salvo ao inicializar
   useEffect(() => {
-    loadUserFromStorage();
+    checkAuthState();
   }, []);
 
-  const loadUserFromStorage = async () => {
+  const checkAuthState = async () => {
     try {
-      const userData = await SecureStore.getItemAsync('user');
-      if (userData) {
+      const token = await SecureStore.getItemAsync('userToken');
+      const userData = await SecureStore.getItemAsync('userData');
+      
+      if (token && userData) {
         setUser(JSON.parse(userData));
       }
     } catch (error) {
-      console.error('Erro ao carregar usuário:', error);
+      console.log('Erro ao verificar estado de autenticação:', error);
     }
   };
 
-  const login = async (data: LoginFormData) => {
+  const formatDateForAPI = (dateString: string): string => {
+    // Converter DD/MM/YYYY para YYYY-MM-DD
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month}-${day}`;
+  };
+
+  const login = async (data: LoginFormData): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simular chamada à API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simular resposta da API
-      const userData: User = {
-        id: '1',
-        fullName: 'João Silva',
+      const response = await apiService.login({
         email: data.email,
-        dateOfBirth: '01/01/1990',
+        password: data.password,
+      });
+
+      // Salvar token e dados do usuário
+      await SecureStore.setItemAsync('userToken', response.token);
+      
+      const userData: User = {
+        id: response.user.id,
+        fullName: response.user.name,
+        name: response.user.name,
+        email: response.user.email,
+        initial_setup_completed: response.user.initial_setup_completed,
       };
 
-      await SecureStore.setItemAsync('user', JSON.stringify(userData));
-      await SecureStore.setItemAsync('token', 'mock-jwt-token');
-      
+      await SecureStore.setItemAsync('userData', JSON.stringify(userData));
       setUser(userData);
+
+      // Mostrar mensagem de sucesso
+      Alert.alert('Sucesso!', response.message);
     } catch (error) {
-      throw new Error('Erro ao fazer login');
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (data: RegisterFormData) => {
+  const register = async (data: RegisterFormData): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simular chamada à API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simular resposta da API
-      const userData: User = {
-        id: '1',
-        fullName: data.fullName,
+      const response = await apiService.register({
+        name: data.fullName,
         email: data.email,
-        dateOfBirth: data.dateOfBirth,
-      };
+        password: data.password,
+        date_of_birth: formatDateForAPI(data.dateOfBirth),
+      });
 
-      await SecureStore.setItemAsync('user', JSON.stringify(userData));
-      await SecureStore.setItemAsync('token', 'mock-jwt-token');
-      
-      setUser(userData);
+      // Mostrar mensagem de sucesso
+      Alert.alert(
+        'Sucesso!', 
+        response.message + ' Agora você pode fazer login.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Não fazer login automático, usuário deve fazer login manualmente
+            }
+          }
+        ]
+      );
     } catch (error) {
-      throw new Error('Erro ao criar conta');
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const forgotPassword = async (email: string) => {
+  const forgotPassword = async (email: string): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simular chamada à API para envio do código
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Código enviado para:', email);
+      const response = await apiService.forgotPassword(email);
+      
+      // Mostrar mensagem com instrução
+      Alert.alert('Email Enviado!', response.instruction);
     } catch (error) {
-      throw new Error('Erro ao enviar código de recuperação');
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const verifyResetCode = async (email: string, code: string) => {
+  const verifyResetCode = async (email: string, code: string): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simular verificação do código
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await apiService.verifyResetCode(code);
       
-      // Simular validação (aceita qualquer código com 6 dígitos)
-      if (code !== '123456') {
-        throw new Error('Código inválido');
+      if (!response.valid) {
+        throw new Error(response.message);
       }
     } catch (error) {
       throw error;
@@ -123,14 +127,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const resetPassword = async (email: string, code: string, newPassword: string) => {
+  const resetPassword = async (
+    email: string,
+    code: string,
+    password: string
+  ): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simular reset da senha
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Senha alterada para:', email);
+      const response = await apiService.resetPassword(code, password);
+      
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+
+      // Mostrar mensagem de sucesso
+      Alert.alert('Sucesso!', response.message);
     } catch (error) {
-      throw new Error('Erro ao alterar senha');
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -138,26 +151,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await SecureStore.deleteItemAsync('user');
-      await SecureStore.deleteItemAsync('token');
+      await SecureStore.deleteItemAsync('userToken');
+      await SecureStore.deleteItemAsync('userData');
       setUser(null);
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      console.log('Erro ao fazer logout:', error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      login,
-      register,
-      logout,
-      isLoading,
-      forgotPassword,
-      verifyResetCode,
-      resetPassword,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        register,
+        logout,
+        forgotPassword,
+        verifyResetCode,
+        resetPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
 };

@@ -1,3 +1,14 @@
+// types/auth.ts
+export interface User {
+  id: string;
+  fullName: string;
+  name: string;
+  email: string;
+  dateOfBirth?: string;
+  mobileNumber?: string;
+  initial_setup_completed?: boolean;
+}
+
 export interface LoginFormData {
   email: string;
   password: string;
@@ -21,9 +32,13 @@ export interface ResetPasswordFormData {
   confirmPassword: string;
 }
 
-export interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  dateOfBirth: string;
+export interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  login: (data: LoginFormData) => Promise<void>;
+  register: (data: RegisterFormData) => Promise<void>;
+  logout: () => void;
+  forgotPassword: (email: string) => Promise<void>;
+  verifyResetCode: (email: string, code: string) => Promise<void>;
+  resetPassword: (email: string, code: string, password: string) => Promise<void>;
 }
