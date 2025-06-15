@@ -1,3 +1,4 @@
+// app/(tabs)/index.tsx
 import { CustomStatusBar } from '@/components/CustomStatusBar';
 import { ThemedText } from '@/components/ThemedText';
 import { COLORS, SIZES } from '@/constants/Theme';
@@ -8,7 +9,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, setupStatus } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -16,6 +17,12 @@ export default function HomeScreen() {
     logout();
     router.replace('/(auth)/welcome');
   };
+
+  // Se o setup não foi completado, redirecionar
+  if (setupStatus && !setupStatus.setup_completed) {
+    router.replace('/budget-setup');
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -31,9 +38,24 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.content}>
-        <ThemedText style={styles.description}>
-          Seu app de gerenciamento financeiro está pronto para uso!
-        </ThemedText>
+        <View style={styles.constructionContainer}>
+          <Text style={styles.constructionEmoji}>🚧</Text>
+          <ThemedText style={styles.constructionTitle}>
+            App em Construção
+          </ThemedText>
+          <ThemedText style={styles.constructionDescription}>
+            Parabéns! Você completou o setup inicial do seu orçamento. 
+            Estamos trabalhando duro para trazer novas funcionalidades em breve!
+          </ThemedText>
+          
+          <View style={styles.comingSoonContainer}>
+            <Text style={styles.comingSoonTitle}>Em breve:</Text>
+            <Text style={styles.comingSoonItem}>💰 Dashboard financeiro</Text>
+            <Text style={styles.comingSoonItem}>📊 Relatórios detalhados</Text>
+            <Text style={styles.comingSoonItem}>🎯 Metas de economia</Text>
+            <Text style={styles.comingSoonItem}>📱 Notificações inteligentes</Text>
+          </View>
+        </View>
         
         <View style={styles.userInfo}>
           <ThemedText style={styles.infoLabel}>Email:</ThemedText>
@@ -81,11 +103,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.paddingHorizontal,
     paddingTop: 30,
   },
-  description: {
+  constructionContainer: {
+    backgroundColor: COLORS.white,
+    padding: 30,
+    borderRadius: SIZES.radiusLarge,
+    alignItems: 'center',
+    marginBottom: 30,
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  constructionEmoji: {
+    fontSize: 60,
+    marginBottom: 20,
+  },
+  constructionTitle: {
+    fontSize: SIZES.h3,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 16,
     textAlign: 'center',
-    marginBottom: 40,
-    fontSize: SIZES.body1,
+  },
+  constructionDescription: {
+    fontSize: SIZES.body2,
     color: COLORS.textLight,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  comingSoonContainer: {
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  comingSoonTitle: {
+    fontSize: SIZES.body1,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginBottom: 12,
+  },
+  comingSoonItem: {
+    fontSize: SIZES.body2,
+    color: COLORS.textLight,
+    marginBottom: 8,
+    lineHeight: 20,
   },
   userInfo: {
     backgroundColor: COLORS.white,

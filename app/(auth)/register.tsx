@@ -25,6 +25,7 @@ export default function RegisterScreen() {
   const { errors, validateRegisterForm, clearErrors } = useFormValidation();
   
   const [formData, setFormData] = useState<RegisterFormData>({
+    mobileNumber: '',
     fullName: '',
     email: '',
     dateOfBirth: '',

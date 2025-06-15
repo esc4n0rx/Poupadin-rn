@@ -7,6 +7,7 @@ export interface User {
   dateOfBirth?: string;
   mobileNumber?: string;
   initial_setup_completed?: boolean;
+  token:string;
 }
 
 export interface LoginFormData {
@@ -15,6 +16,7 @@ export interface LoginFormData {
 }
 
 export interface RegisterFormData {
+  mobileNumber: string;
   fullName: string;
   email: string;
   dateOfBirth: string;
