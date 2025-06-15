@@ -1,208 +1,337 @@
 // contexts/AuthContext.tsx
 import {
   LoginFormData,
-  LoginResponse,
   RegisterFormData,
-  RegisterResponse,
   User
 } from '@/types/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-interface AuthContextType {
+// URL base da API - ajuste conforme necessário
+const API_BASE_URL = 'https://api.poupadin.space/api';
+
+interface AuthContextData {
   user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginFormData) => Promise<void>;
-  register: (userData: RegisterFormData) => Promise<void>;
-  logout: () => Promise<void>;
+  setupCompleted: boolean;
+  login: (data: LoginFormData) => Promise<void>;
+  register: (data: RegisterFormData) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   verifyResetCode: (email: string, code: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateSetupStatus: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [setupCompleted, setSetupCompleted] = useState<boolean>(false);
 
-  // URL base da API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+  // Carregar dados armazenados ao inicializar
+  useEffect(() => {
+    loadStoredUser();
+  }, []);
 
-  const makeRequest = async (endpoint: string, options: RequestInit = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
-    
-    console.log('Fazendo requisição para:', url); // Debug
-    
+  const loadStoredUser = async () => {
     try {
-      const response = await fetch(url, {
+      setIsLoading(true);
+      const storedToken = await SecureStore.getItemAsync('token');
+      const storedUser = await SecureStore.getItemAsync('user');
+
+      console.log('Token armazenado:', storedToken ? 'Existe' : 'Não existe');
+      console.log('Usuário armazenado:', storedUser ? 'Existe' : 'Não existe');
+
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+        setSetupCompleted(userData.initial_setup_completed || false);
+        setIsAuthenticated(true);
+        
+        console.log('Dados carregados - Setup completed:', userData.initial_setup_completed);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados armazenados:', error);
+      // Em caso de erro, limpar dados corrompidos
+      await clearStoredData();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearStoredData = async () => {
+    try {
+      await SecureStore.deleteItemAsync('token');
+      await SecureStore.deleteItemAsync('user');
+    } catch (error) {
+      console.error('Erro ao limpar dados armazenados:', error);
+    }
+  };
+
+  const login = async (data: LoginFormData) => {
+    try {
+      setIsLoading(true);
+      console.log('Fazendo requisição para:', `${API_BASE_URL}/auth/login`);
+
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...options.headers,
         },
-        ...options,
+        body: JSON.stringify(data),
       });
 
-      console.log('Status da resposta:', response.status); // Debug
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.log('Erro da API:', errorData); // Debug
-        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('Resposta da API:', data); // Debug
-      return data;
-    } catch (error) {
-      console.error('Erro na requisição:', error); // Debug
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
-      }
-      throw error;
-    }
-  };
-
-  const login = async (credentials: LoginFormData) => {
-    setIsLoading(true);
-    try {
-      const response: LoginResponse = await makeRequest('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      });
-
-      // Salvar token e dados do usuário
-      await AsyncStorage.setItem('authToken', response.token);
-      await AsyncStorage.setItem('userData', JSON.stringify(response.user));
+      console.log('Status da resposta:', response.status);
       
-      setUser(response.user);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro no login');
+      }
+
+      const responseData = await response.json();
+      console.log('Resposta da API:', responseData);
+
+      if (responseData.token && responseData.user) {
+        setToken(responseData.token);
+        setUser(responseData.user);
+        setSetupCompleted(responseData.user.initial_setup_completed || false);
+        setIsAuthenticated(true);
+
+        // Armazenar dados localmente
+        await SecureStore.setItemAsync('token', responseData.token);
+        await SecureStore.setItemAsync('user', JSON.stringify(responseData.user));
+
+        console.log('Login bem-sucedido - Setup completed:', responseData.user.initial_setup_completed);
+      } else {
+        throw new Error('Dados de login inválidos');
+      }
     } catch (error) {
+      console.error('Erro no login:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (userData: RegisterFormData) => {
-    setIsLoading(true);
+  const register = async (data: RegisterFormData) => {
     try {
-      // Converter formato da data de DD/MM/YYYY para YYYY-MM-DD
-      const [day, month, year] = userData.dateOfBirth.split('/');
-      const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      setIsLoading(true);
+      console.log('Fazendo requisição para:', `${API_BASE_URL}/auth/register`);
 
-      // Mapear dados para formato da API
-      const apiPayload = {
-        name: userData.name,
-        email: userData.email,
-        password: userData.password,
-        date_of_birth: formattedDate,
+      // Formatar data de nascimento para ISO se necessário
+      const formattedData = {
+        ...data,
+        date_of_birth: data.dateOfBirth, // Ajustar campo se necessário
       };
 
-      console.log('Payload para register:', apiPayload); // Debug
-
-      const response: RegisterResponse = await makeRequest('/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
-        body: JSON.stringify(apiPayload),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formattedData),
       });
 
-      // Para registro, ainda não temos token, então o usuário precisa fazer login
-      // Ou podemos implementar auto-login após registro
-      
-      // Se quiser auto-login após registro, descomente:
-      // await AsyncStorage.setItem('userData', JSON.stringify(response.user));
-      // setUser(response.user);
-      
+      console.log('Status da resposta:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro no cadastro');
+      }
+
+      const responseData = await response.json();
+      console.log('Resposta da API:', responseData);
+
+      // Não fazer login automático, apenas retornar sucesso
+      return responseData;
     } catch (error) {
+      console.error('Erro no cadastro:', error);
       throw error;
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await AsyncStorage.multiRemove(['authToken', 'userData']);
-      setUser(null);
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
     }
   };
 
   const forgotPassword = async (email: string) => {
-    setIsLoading(true);
     try {
-      await makeRequest('/api/auth/forgot-password', {
+      setIsLoading(true);
+      console.log('Fazendo requisição para:', `${API_BASE_URL}/auth/forgot-password`);
+
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email }),
       });
+
+      console.log('Status da resposta:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao enviar código');
+      }
+
+      const responseData = await response.json();
+      console.log('Resposta da API:', responseData);
+
+      return responseData;
+    } catch (error) {
+      console.error('Erro ao solicitar reset de senha:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
   const verifyResetCode = async (email: string, code: string) => {
-    return makeRequest('/api/auth/verify-reset-code', {
-      method: 'POST',
-      body: JSON.stringify({ code }),
-    });
+    try {
+      setIsLoading(true);
+      console.log('Fazendo requisição para:', `${API_BASE_URL}/auth/verify-reset-code`);
+
+      const response = await fetch(`${API_BASE_URL}/auth/verify-reset-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, code }),
+      });
+
+      console.log('Status da resposta:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Código inválido');
+      }
+
+      const responseData = await response.json();
+      console.log('Resposta da API:', responseData);
+
+      return responseData;
+    } catch (error) {
+      console.error('Erro ao verificar código:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetPassword = async (email: string, code: string, newPassword: string) => {
-    return makeRequest('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ 
-        code, 
-        password: newPassword // API espera 'password', não 'newPassword'
-      }),
-    });
+    try {
+      setIsLoading(true);
+      console.log('Fazendo requisição para:', `${API_BASE_URL}/auth/reset-password`);
+
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          code, 
+          new_password: newPassword 
+        }),
+      });
+
+      console.log('Status da resposta:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao alterar senha');
+      }
+
+      const responseData = await response.json();
+      console.log('Resposta da API:', responseData);
+
+      return responseData;
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Verificar se há usuário salvo ao inicializar
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const [token, userData] = await AsyncStorage.multiGet(['authToken', 'userData']);
+  const updateSetupStatus = async () => {
+    try {
+      console.log('Atualizando status do setup...');
+
+      // Atualizar localmente primeiro
+      if (user) {
+        const updatedUser = { ...user, initial_setup_completed: true };
+        setUser(updatedUser);
+        setSetupCompleted(true);
+        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
         
-        if (token[1] && userData[1]) {
-          const user = JSON.parse(userData[1]);
-          setUser(user);
-        }
-      } catch (error) {
-        console.error('Erro ao inicializar autenticação:', error);
-      } finally {
-        setIsInitializing(false);
+        console.log('Status do setup atualizado localmente');
       }
-    };
 
-    initializeAuth();
-  }, []);
+      // TODO: Implementar chamada para API para atualizar no backend
+      // const response = await fetch(`${API_BASE_URL}/user/complete-setup`, {
+      //   method: 'PATCH',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${token}`,
+      //   },
+      // });
 
-  // Se ainda está inicializando, não renderizar nada
-  if (isInitializing) {
-    return null;
-  }
+      // if (!response.ok) {
+      //   throw new Error('Erro ao atualizar status no servidor');
+      // }
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isLoading,
-      login,
-      register,
-      logout,
-      forgotPassword,
-      verifyResetCode,
-      resetPassword,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+    } catch (error) {
+      console.error('Erro ao atualizar status do setup:', error);
+      throw error;
+    }
+  };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const logout = async () => {
+    try {
+      console.log('Fazendo logout...');
+      
+      setUser(null);
+      setToken(null);
+      setSetupCompleted(false);
+      setIsAuthenticated(false);
+      
+      await SecureStore.deleteItemAsync('token');
+      await SecureStore.deleteItemAsync('user');
+      
+      console.log('Logout realizado com sucesso');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    }
+  };
+
+  const value: AuthContextData = {
+    user,
+    token,
+    isAuthenticated,
+    isLoading,
+    setupCompleted,
+    login,
+    register,
+    forgotPassword,
+    verifyResetCode,
+    resetPassword,
+    logout,
+    updateSetupStatus,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

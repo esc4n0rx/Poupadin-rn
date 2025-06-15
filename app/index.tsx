@@ -1,3 +1,4 @@
+// app/index.tsx
 import { CustomStatusBar } from '@/components/CustomStatusBar';
 import { COLORS } from '@/constants/Theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,19 +8,25 @@ import { ActivityIndicator, View } from 'react-native';
 
 export default function Index() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, setupCompleted, isLoading } = useAuth();
 
   useEffect(() => {
+    if (isLoading) return;
+
     const timer = setTimeout(() => {
       if (user) {
-        router.replace('/(tabs)');
+        if (setupCompleted) {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/budget-setup');
+        }
       } else {
         router.replace('/(auth)/welcome');
       }
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [user, router]);
+  }, [user, setupCompleted, isLoading, router]);
 
   return (
     <View style={{ 

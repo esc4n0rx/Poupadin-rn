@@ -18,8 +18,3 @@ export interface BudgetSetupData {
   incomes: Omit<Income, 'id'>[];
   categories: Omit<Category, 'id'>[];
 }
-
-export interface SetupStatus {
-  setup_completed: boolean;
-  has_budget: boolean;
-}
