@@ -1,3 +1,4 @@
+// app/(tabs)/budget-setup.tsx
 import { CategoryForm } from '@/components/CategoryForm';
 import { CustomButton } from '@/components/CustomButton';
 import { CustomStatusBar } from '@/components/CustomStatusBar';
@@ -17,7 +18,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -80,7 +81,7 @@ export default function BudgetSetupScreen() {
       Alert.alert('Erro no Orçamento', 'O valor total alocado nas categorias não pode ser maior que a sua renda total.');
       return;
     }
-    
+
     if (!user) {
       Alert.alert('Erro', 'Usuário não encontrado. Por favor, faça login novamente.');
       return;
@@ -102,11 +103,13 @@ export default function BudgetSetupScreen() {
           onPress: async () => {
             await updateSetupStatus();
             router.replace('/(tabs)');
-          }
-        }
+          },
+        },
       ]);
     } catch (error) {
-      getErrorMessage(error, 'Não foi possível finalizar a configuração.');
+      // ✅ CORREÇÃO: Agora o erro é exibido em um Alert.
+      const errorMessage = getErrorMessage(error, 'Não foi possível finalizar a configuração.');
+      Alert.alert('Erro', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -129,23 +132,19 @@ export default function BudgetSetupScreen() {
     <View style={styles.stepIndicatorContainer}>
       {[1, 2, 3].map((step, index) => (
         <React.Fragment key={step}>
-          <View style={[
-            styles.stepDot, 
-            currentStep >= step && styles.stepDotActive,
-            currentStep === step && styles.stepDotCurrent
-          ]}>
-            <Text style={[
-              styles.stepText, 
-              currentStep >= step && styles.stepTextActive
-            ]}>
+          <View
+            style={[
+              styles.stepDot,
+              currentStep >= step && styles.stepDotActive,
+              currentStep === step && styles.stepDotCurrent,
+            ]}
+          >
+            <Text style={[styles.stepText, currentStep >= step && styles.stepTextActive]}>
               {step}
             </Text>
           </View>
           {index < 2 && (
-            <View style={[
-              styles.stepLine, 
-              currentStep > step && styles.stepLineActive
-            ]} />
+            <View style={[styles.stepLine, currentStep > step && styles.stepLineActive]} />
           )}
         </React.Fragment>
       ))}
@@ -155,12 +154,7 @@ export default function BudgetSetupScreen() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return (
-          <IncomeForm 
-            incomes={incomes} 
-            onIncomesChange={setIncomes} 
-          />
-        );
+        return <IncomeForm incomes={incomes} onIncomesChange={setIncomes} />;
       case 2:
         return (
           <CategoryForm
@@ -173,7 +167,7 @@ export default function BudgetSetupScreen() {
         return (
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryTitle}>Resumo do Orçamento</Text>
-            
+
             <View style={styles.summarySection}>
               <Text style={styles.sectionTitle}>💰 Rendas ({incomes.length})</Text>
               {incomes.map((income, index) => (
@@ -216,11 +210,16 @@ export default function BudgetSetupScreen() {
               </View>
               <View style={[styles.totalRow, styles.remainingRow]}>
                 <Text style={styles.totalLabel}>Sobra/Falta:</Text>
-                <Text style={[
-                  styles.totalValue, 
-                  { color: totalIncome - totalAllocated >= 0 ? COLORS.success : COLORS.error }
-                ]}>
-                  {(totalIncome - totalAllocated).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                <Text
+                  style={[
+                    styles.totalValue,
+                    { color: totalIncome - totalAllocated >= 0 ? COLORS.success : COLORS.error },
+                  ]}
+                >
+                  {(totalIncome - totalAllocated).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
                 </Text>
               </View>
             </View>
