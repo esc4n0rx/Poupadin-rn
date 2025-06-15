@@ -1,4 +1,4 @@
-import { LoginFormData, RegisterFormData } from '@/types/auth';
+import { ForgotPasswordFormData, LoginFormData, RegisterFormData, ResetPasswordFormData } from '@/types/auth';
 import { useState } from 'react';
 
 interface ValidationErrors {
@@ -11,11 +11,6 @@ export const useFormValidation = () => {
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  };
-
-  const validatePhone = (phone: string): boolean => {
-    const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-    return phoneRegex.test(phone);
   };
 
   const validateDate = (date: string): boolean => {
@@ -61,13 +56,6 @@ export const useFormValidation = () => {
       newErrors.email = 'Email inválido';
     }
 
-    // Validar telefone
-    if (!data.mobileNumber.trim()) {
-      newErrors.mobileNumber = 'Número de telefone é obrigatório';
-    } else if (!validatePhone(data.mobileNumber)) {
-      newErrors.mobileNumber = 'Número de telefone inválido';
-    }
-
     // Validar data de nascimento
     if (!data.dateOfBirth.trim()) {
       newErrors.dateOfBirth = 'Data de nascimento é obrigatória';
@@ -93,6 +81,47 @@ export const useFormValidation = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateForgotPasswordForm = (data: ForgotPasswordFormData): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    if (!data.email.trim()) {
+      newErrors.email = 'Email é obrigatório';
+    } else if (!validateEmail(data.email)) {
+      newErrors.email = 'Email inválido';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateResetPasswordForm = (data: ResetPasswordFormData): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    // Validar código
+    if (!data.code.trim()) {
+      newErrors.code = 'Código é obrigatório';
+    } else if (data.code.length !== 6) {
+      newErrors.code = 'Código deve ter 6 dígitos';
+    }
+
+    // Validar nova senha
+    if (!data.newPassword) {
+      newErrors.newPassword = 'Nova senha é obrigatória';
+    } else if (data.newPassword.length < 6) {
+      newErrors.newPassword = 'Senha deve ter pelo menos 6 caracteres';
+    }
+
+    // Validar confirmação de senha
+    if (!data.confirmPassword) {
+      newErrors.confirmPassword = 'Confirmação de senha é obrigatória';
+    } else if (data.newPassword !== data.confirmPassword) {
+      newErrors.confirmPassword = 'Senhas não coincidem';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const clearErrors = () => {
     setErrors({});
   };
@@ -101,6 +130,8 @@ export const useFormValidation = () => {
     errors,
     validateLoginForm,
     validateRegisterForm,
+    validateForgotPasswordForm,
+    validateResetPasswordForm,
     clearErrors,
   };
 };

@@ -9,12 +9,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -70,12 +70,10 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <CustomStatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
       
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerTitle}>Bem-vindo</Text>
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
         <ScrollView 
           showsVerticalScrollIndicator={false}
@@ -122,7 +120,6 @@ export default function LoginScreen() {
               style={styles.signUpButton}
             />
 
-            {/* Biometric Login */}
             <TouchableOpacity 
               style={styles.biometricContainer}
               onPress={handleBiometricLogin}
@@ -132,7 +129,6 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Social Login */}
             <Text style={styles.socialText}>ou entre com</Text>
             
             <View style={styles.socialContainer}>
@@ -203,9 +199,10 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: SIZES.body3,
-    color: COLORS.text,
+    color: COLORS.primary,
     textAlign: 'center',
     marginBottom: 30,
+    fontWeight: '600',
   },
   signUpButton: {
     marginBottom: 20,
