@@ -10,14 +10,14 @@ import { getErrorMessage } from '@/utils/errorHandler';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Animated,
-    KeyboardAvoidingView, // Adicionado
-    Platform, // Adicionado
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Alert,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,31 +37,35 @@ export default function BudgetSetupScreen() {
   const totalAllocated = categories.reduce((sum, cat) => sum + cat.allocated_amount, 0);
 
   const animateStep = (toStep: number) => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => {
-      setCurrentStep(toStep);
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 150,
+        duration: 200,
         useNativeDriver: true,
-      }).start();
+      }),
+    ]).start(() => {
+      setCurrentStep(toStep);
     });
   };
 
   const handleNextStep = () => {
-    if (currentStep === 1 && incomes.length === 0) {
-      Alert.alert('Renda Necessária', 'Você precisa adicionar pelo menos uma fonte de renda para continuar.');
-      return;
-    }
-    if (currentStep === 2 && categories.length === 0) {
-      Alert.alert('Categoria Necessária', 'Você precisa adicionar pelo menos uma categoria de gastos.');
-      return;
-    }
-    if (currentStep < 3) {
-      animateStep(currentStep + 1);
+    if (currentStep === 1) {
+      if (incomes.length === 0) {
+        Alert.alert('Renda Necessária', 'Você precisa adicionar pelo menos uma fonte de renda para continuar.');
+        return;
+      }
+      animateStep(2);
+    } else if (currentStep === 2) {
+      if (categories.length === 0) {
+        Alert.alert('Categoria Necessária', 'Você precisa adicionar pelo menos uma categoria de gastos.');
+        return;
+      }
+      animateStep(3);
     }
   };
 
@@ -76,6 +80,7 @@ export default function BudgetSetupScreen() {
       Alert.alert('Erro no Orçamento', 'O valor total alocado nas categorias não pode ser maior que a sua renda total.');
       return;
     }
+    
     if (!user) {
       Alert.alert('Erro', 'Usuário não encontrado. Por favor, faça login novamente.');
       return;
@@ -84,16 +89,22 @@ export default function BudgetSetupScreen() {
     setIsLoading(true);
 
     const budgetData: BudgetSetupData = {
-        incomes: incomes.map(({ id, ...rest }) => rest), // Remove ID temporário do frontend
-        categories: categories.map(({ id, ...rest }) => rest),
-        name: ''
+      name: `Orçamento de ${user.name}`,
+      incomes: incomes.map(({ id, ...rest }) => rest),
+      categories: categories.map(({ id, ...rest }) => rest),
     };
 
     try {
-      budgetService.setupBudget(budgetData);
-      Alert.alert('Sucesso!', 'Seu orçamento foi configurado com sucesso.');
-      await updateSetupStatus();
-      router.replace('/(tabs)');
+      await budgetService.setupBudget(budgetData);
+      Alert.alert('Sucesso!', 'Seu orçamento foi configurado com sucesso.', [
+        {
+          text: 'OK',
+          onPress: async () => {
+            await updateSetupStatus();
+            router.replace('/(tabs)');
+          }
+        }
+      ]);
     } catch (error) {
       getErrorMessage(error, 'Não foi possível finalizar a configuração.');
     } finally {
@@ -101,109 +112,196 @@ export default function BudgetSetupScreen() {
     }
   };
 
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 1:
+        return 'Definir Rendas';
+      case 2:
+        return 'Criar Categorias';
+      case 3:
+        return 'Revisar Orçamento';
+      default:
+        return 'Configurar Orçamento';
+    }
+  };
+
   const renderStepIndicator = () => (
     <View style={styles.stepIndicatorContainer}>
-      {[1, 2, 3].map((step) => (
+      {[1, 2, 3].map((step, index) => (
         <React.Fragment key={step}>
-          <View style={[styles.stepDot, currentStep >= step && styles.stepDotActive]}>
-            <Text style={[styles.stepText, currentStep >= step && styles.stepTextActive]}>{step}</Text>
+          <View style={[
+            styles.stepDot, 
+            currentStep >= step && styles.stepDotActive,
+            currentStep === step && styles.stepDotCurrent
+          ]}>
+            <Text style={[
+              styles.stepText, 
+              currentStep >= step && styles.stepTextActive
+            ]}>
+              {step}
+            </Text>
           </View>
-          {step < 3 && <View style={[styles.stepLine, currentStep > step && styles.stepLineActive]} />}
+          {index < 2 && (
+            <View style={[
+              styles.stepLine, 
+              currentStep > step && styles.stepLineActive
+            ]} />
+          )}
         </React.Fragment>
       ))}
     </View>
   );
 
-  const renderStep1 = () => (
-    <Animated.View style={{ opacity: fadeAnim }}>
-      <IncomeForm incomes={incomes} onIncomesChange={setIncomes} />
-    </Animated.View>
-  );
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <IncomeForm 
+            incomes={incomes} 
+            onIncomesChange={setIncomes} 
+          />
+        );
+      case 2:
+        return (
+          <CategoryForm
+            categories={categories}
+            onCategoriesChange={setCategories}
+            totalIncome={totalIncome}
+          />
+        );
+      case 3:
+        return (
+          <View style={styles.summaryContainer}>
+            <Text style={styles.summaryTitle}>Resumo do Orçamento</Text>
+            
+            <View style={styles.summarySection}>
+              <Text style={styles.sectionTitle}>💰 Rendas ({incomes.length})</Text>
+              {incomes.map((income, index) => (
+                <View key={index} style={styles.summaryItem}>
+                  <Text style={styles.summaryItemLabel}>{income.description}</Text>
+                  <Text style={styles.summaryItemValue}>
+                    {income.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </Text>
+                </View>
+              ))}
+            </View>
 
-  const renderStep2 = () => (
-    <Animated.View style={{ opacity: fadeAnim }}>
-      <CategoryForm
-        categories={categories}
-        onCategoriesChange={setCategories}
-        totalIncome={totalIncome}
-      />
-    </Animated.View>
-  );
+            <View style={styles.summarySection}>
+              <Text style={styles.sectionTitle}>📊 Categorias ({categories.length})</Text>
+              {categories.map((category, index) => (
+                <View key={index} style={styles.summaryItem}>
+                  <View style={styles.categoryRow}>
+                    <View style={[styles.colorDot, { backgroundColor: category.color }]} />
+                    <Text style={styles.summaryItemLabel}>{category.name}</Text>
+                  </View>
+                  <Text style={styles.summaryItemValue}>
+                    {category.allocated_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </Text>
+                </View>
+              ))}
+            </View>
 
-  const renderStep3 = () => (
-    <Animated.View style={[styles.summaryContainer, { opacity: fadeAnim }]}>
-      <Text style={styles.summaryTitle}>Resumo do Orçamento</Text>
-      <View style={styles.summaryBox}>
-        <Text style={styles.summaryLabel}>Renda Total Mensal:</Text>
-        <Text style={styles.summaryValueIncome}>
-          {totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        </Text>
-      </View>
-      <View style={styles.summaryBox}>
-        <Text style={styles.summaryLabel}>Total Alocado nas Categorias:</Text>
-        <Text style={styles.summaryValueAllocated}>
-          {totalAllocated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        </Text>
-      </View>
-      <View style={styles.summaryBox}>
-        <Text style={styles.summaryLabel}>Valor Restante:</Text>
-        <Text style={styles.summaryValueRemaining}>
-          {(totalIncome - totalAllocated).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        </Text>
-      </View>
-      {totalAllocated > totalIncome && (
-        <Text style={styles.warningText}>Atenção: Você alocou mais dinheiro do que sua renda!</Text>
-      )}
-    </Animated.View>
-  );
+            <View style={styles.totalBox}>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Renda Total:</Text>
+                <Text style={[styles.totalValue, { color: COLORS.success }]}>
+                  {totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </Text>
+              </View>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Alocado:</Text>
+                <Text style={[styles.totalValue, { color: COLORS.error }]}>
+                  {totalAllocated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </Text>
+              </View>
+              <View style={[styles.totalRow, styles.remainingRow]}>
+                <Text style={styles.totalLabel}>Sobra/Falta:</Text>
+                <Text style={[
+                  styles.totalValue, 
+                  { color: totalIncome - totalAllocated >= 0 ? COLORS.success : COLORS.error }
+                ]}>
+                  {(totalIncome - totalAllocated).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </Text>
+              </View>
+            </View>
+
+            {totalAllocated > totalIncome && (
+              <View style={styles.warningBox}>
+                <Text style={styles.warningText}>
+                  ⚠️ Atenção: Você alocou mais dinheiro do que sua renda total!
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <CustomStatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerTitle}>Configurar Orçamento</Text>
+        <Text style={styles.headerSubtitle}>{getStepTitle()}</Text>
         {renderStepIndicator()}
       </View>
 
       <View style={styles.content}>
         <ScrollView
-          showsVerticalScrollIndicator={false}
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
+          <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
+            {renderStepContent()}
+          </Animated.View>
         </ScrollView>
 
         <View style={styles.navigation}>
-          {currentStep > 1 && (
-            <CustomButton
-              title="Voltar"
-              onPress={handlePreviousStep}
-              variant="outline"
-              style={styles.backButton}
-            />
-          )}
+          <View style={styles.buttonContainer}>
+            {currentStep > 1 && (
+              <CustomButton
+                title="Voltar"
+                onPress={handlePreviousStep}
+                variant="outline"
+                style={styles.backButton}
+              />
+            )}
 
-          {currentStep < 3 ? (
-            <CustomButton
-              title="Próximo"
-              onPress={handleNextStep}
-              style={styles.nextButton}
-            />
-          ) : (
-            <CustomButton
-              title="Finalizar Setup"
-              onPress={handleFinishSetup}
-              loading={isLoading}
-              style={styles.finishButton}
-            />
-          )}
+            {currentStep < 3 ? (
+              <CustomButton
+                title="Próximo"
+                onPress={handleNextStep}
+                style={
+                  currentStep === 1
+                    ? { ...styles.nextButton, ...styles.fullWidthButton }
+                    : styles.nextButton
+                }
+                disabled={currentStep === 1 ? incomes.length === 0 : categories.length === 0}
+              />
+            ) : (
+              <CustomButton
+                title="Finalizar Setup"
+                onPress={handleFinishSetup}
+                loading={isLoading}
+                style={
+                  currentStep === 1
+                    ? StyleSheet.flatten([styles.finishButton, styles.fullWidthButton])
+                    : styles.finishButton
+                }
+                disabled={totalAllocated > totalIncome}
+              />
+            )}
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -218,13 +316,20 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: COLORS.primary,
     paddingHorizontal: SIZES.paddingHorizontal,
-    paddingBottom: 40,
+    paddingBottom: 30,
   },
   headerTitle: {
     color: COLORS.white,
     fontSize: SIZES.h2,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    color: COLORS.white,
+    fontSize: SIZES.body2,
+    textAlign: 'center',
+    opacity: 0.9,
     marginBottom: 20,
   },
   stepIndicatorContainer: {
@@ -233,110 +338,184 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepDot: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: COLORS.secondary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.gray,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   stepDotActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     borderColor: COLORS.white,
   },
+  stepDotCurrent: {
+    backgroundColor: COLORS.white,
+    borderColor: COLORS.white,
+    transform: [{ scale: 1.1 }],
+  },
   stepText: {
-    color: COLORS.gray,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: 'bold',
+    fontSize: SIZES.body3,
   },
   stepTextActive: {
-    color: COLORS.white,
+    color: COLORS.primary,
   },
   stepLine: {
     flex: 1,
-    height: 3,
-    backgroundColor: COLORS.gray,
-    marginHorizontal: -2,
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 8,
+    maxWidth: 40,
   },
   stepLineActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
   },
   content: {
     flex: 1,
     backgroundColor: COLORS.background,
-    marginTop: -20,
+    marginTop: -15,
     borderTopLeftRadius: SIZES.radiusLarge,
     borderTopRightRadius: SIZES.radiusLarge,
     overflow: 'hidden',
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: SIZES.paddingHorizontal,
-    paddingTop: 30,
+    paddingTop: 25,
     paddingBottom: 20,
+    flexGrow: 1,
+  },
+  stepContent: {
+    flex: 1,
+    minHeight: 200,
   },
   navigation: {
-    flexDirection: 'row',
+    backgroundColor: COLORS.white,
     paddingHorizontal: SIZES.paddingHorizontal,
     paddingVertical: 20,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-    gap: 12,
-    backgroundColor: COLORS.background,
+    paddingBottom: Platform.OS === 'ios' ? 35 : 20,
     borderTopWidth: 1,
     borderTopColor: COLORS.inputBorder,
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
   },
   backButton: {
     flex: 1,
   },
   nextButton: {
     flex: 2,
-    marginLeft: 'auto',
   },
   finishButton: {
     flex: 2,
-    marginLeft: 'auto',
+  },
+  fullWidthButton: {
+    flex: 1,
   },
   summaryContainer: {
-    backgroundColor: COLORS.white,
-    padding: SIZES.padding,
-    borderRadius: SIZES.radius,
+    flex: 1,
   },
   summaryTitle: {
     fontSize: SIZES.h3,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
   },
-  summaryBox: {
-    backgroundColor: COLORS.secondary,
-    padding: SIZES.padding,
-    borderRadius: SIZES.radius,
+  summarySection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: SIZES.body1,
+    fontWeight: 'bold',
+    color: COLORS.text,
     marginBottom: 12,
   },
-  summaryLabel: {
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderRadius: SIZES.radius,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  colorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  summaryItemLabel: {
     fontSize: SIZES.body3,
     color: COLORS.text,
+    flex: 1,
   },
-  summaryValueIncome: {
-    fontSize: SIZES.h3,
-    fontWeight: 'bold',
-    color: COLORS.success,
+  summaryItemValue: {
+    fontSize: SIZES.body3,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
-  summaryValueAllocated: {
-    fontSize: SIZES.h3,
-    fontWeight: 'bold',
-    color: COLORS.error,
+  totalBox: {
+    backgroundColor: COLORS.secondary,
+    padding: 20,
+    borderRadius: SIZES.radius,
+    marginBottom: 16,
   },
-  summaryValueRemaining: {
-    fontSize: SIZES.h3,
-    fontWeight: 'bold',
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  remainingRow: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.inputBorder,
+    paddingTop: 12,
+    marginTop: 8,
+    marginBottom: 0,
+  },
+  totalLabel: {
+    fontSize: SIZES.body2,
     color: COLORS.text,
+    fontWeight: '500',
+  },
+  totalValue: {
+    fontSize: SIZES.body1,
+    fontWeight: 'bold',
+  },
+  warningBox: {
+    backgroundColor: COLORS.error,
+    padding: 16,
+    borderRadius: SIZES.radius,
+    marginTop: 8,
   },
   warningText: {
-    color: COLORS.error,
+    color: COLORS.white,
     textAlign: 'center',
-    marginTop: 10,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    fontSize: SIZES.body3,
   },
 });
