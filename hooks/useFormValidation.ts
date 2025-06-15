@@ -18,7 +18,6 @@ export const useFormValidation = () => {
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(date)) return false;
     
-    // Validar se é uma data válida
     const [day, month, year] = date.split('/').map(Number);
     const dateObj = new Date(year, month - 1, day);
     
@@ -26,30 +25,26 @@ export const useFormValidation = () => {
            dateObj.getMonth() === month - 1 &&
            dateObj.getDate() === day &&
            year >= 1900 &&
-           year <= new Date().getFullYear() - 13; // Mínimo 13 anos
+           year <= new Date().getFullYear() - 13;
   };
 
   const validatePassword = (password: string): boolean => {
-    // Mínimo 8 caracteres conforme API
     return password.length >= 8;
   };
 
   const validateName = (name: string): boolean => {
-    // Mínimo 3 caracteres conforme API
     return name.trim().length >= 3;
   };
 
   const validateLoginForm = (data: LoginFormData): boolean => {
     const newErrors: ValidationErrors = {};
 
-    // Validar email
     if (!data.email.trim()) {
       newErrors.email = 'Email é obrigatório';
     } else if (!validateEmail(data.email)) {
       newErrors.email = 'Email inválido';
     }
 
-    // Validar senha
     if (!data.password) {
       newErrors.password = 'Senha é obrigatória';
     } else if (!validatePassword(data.password)) {
@@ -63,35 +58,31 @@ export const useFormValidation = () => {
   const validateRegisterForm = (data: RegisterFormData): boolean => {
     const newErrors: ValidationErrors = {};
 
-    // Validar nome completo
-    if (!data.fullName.trim()) {
-      newErrors.fullName = 'Nome completo é obrigatório';
-    } else if (!validateName(data.fullName)) {
-      newErrors.fullName = 'Nome deve ter pelo menos 3 caracteres';
+    // Validar nome (mudança: era fullName)
+    if (!data.name.trim()) {
+      newErrors.name = 'Nome é obrigatório';
+    } else if (!validateName(data.name)) {
+      newErrors.name = 'Nome deve ter pelo menos 3 caracteres';
     }
 
-    // Validar email
     if (!data.email.trim()) {
       newErrors.email = 'Email é obrigatório';
     } else if (!validateEmail(data.email)) {
       newErrors.email = 'Email inválido';
     }
 
-    // Validar data de nascimento
     if (!data.dateOfBirth.trim()) {
       newErrors.dateOfBirth = 'Data de nascimento é obrigatória';
     } else if (!validateDate(data.dateOfBirth)) {
       newErrors.dateOfBirth = 'Data inválida (DD/MM/AAAA) - Mínimo 13 anos';
     }
 
-    // Validar senha
     if (!data.password) {
       newErrors.password = 'Senha é obrigatória';
     } else if (!validatePassword(data.password)) {
       newErrors.password = 'Senha deve ter pelo menos 8 caracteres';
     }
 
-    // Validar confirmação de senha
     if (!data.confirmPassword) {
       newErrors.confirmPassword = 'Confirmação de senha é obrigatória';
     } else if (data.password !== data.confirmPassword) {
@@ -118,21 +109,18 @@ export const useFormValidation = () => {
   const validateResetPasswordForm = (data: ResetPasswordFormData): boolean => {
     const newErrors: ValidationErrors = {};
 
-    // Validar código
     if (!data.code.trim()) {
       newErrors.code = 'Código é obrigatório';
     } else if (data.code.length !== 6) {
       newErrors.code = 'Código deve ter 6 dígitos';
     }
 
-    // Validar nova senha
     if (!data.newPassword) {
       newErrors.newPassword = 'Nova senha é obrigatória';
     } else if (!validatePassword(data.newPassword)) {
       newErrors.newPassword = 'Senha deve ter pelo menos 8 caracteres';
     }
 
-    // Validar confirmação de senha
     if (!data.confirmPassword) {
       newErrors.confirmPassword = 'Confirmação de senha é obrigatória';
     } else if (data.newPassword !== data.confirmPassword) {

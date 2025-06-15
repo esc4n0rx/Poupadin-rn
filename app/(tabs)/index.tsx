@@ -9,7 +9,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const { user, logout, setupStatus } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -18,11 +18,11 @@ export default function HomeScreen() {
     router.replace('/(auth)/welcome');
   };
 
-  // Se o setup não foi completado, redirecionar
-  if (setupStatus && !setupStatus.setup_completed) {
-    router.replace('/budget-setup');
-    return null;
-  }
+  // // Se o setup não foi completado, redirecionar
+  // if (setupStatus && !setupStatus.setup_completed) {
+  //   router.replace('/budget-setup');
+  //   return null;
+  // }
 
   return (
     <View style={styles.container}>
@@ -30,7 +30,7 @@ export default function HomeScreen() {
       
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <ThemedText type="title" style={styles.welcomeText}>
-          Olá, {user?.fullName || 'Usuário'}! 👋
+          Olá, {user?.name|| 'Usuário'}! 👋
         </ThemedText>
         <ThemedText style={styles.subtitle}>
           Bem-vindo ao Poupadin
@@ -61,11 +61,9 @@ export default function HomeScreen() {
           <ThemedText style={styles.infoLabel}>Email:</ThemedText>
           <ThemedText style={styles.infoValue}>{user?.email}</ThemedText>
           
-          <ThemedText style={styles.infoLabel}>Telefone:</ThemedText>
-          <ThemedText style={styles.infoValue}>{user?.mobileNumber}</ThemedText>
           
           <ThemedText style={styles.infoLabel}>Data de Nascimento:</ThemedText>
-          <ThemedText style={styles.infoValue}>{user?.dateOfBirth}</ThemedText>
+          <ThemedText style={styles.infoValue}>{user?.date_of_birth}</ThemedText>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

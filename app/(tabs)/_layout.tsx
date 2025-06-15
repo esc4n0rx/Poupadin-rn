@@ -12,30 +12,43 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { user, setupStatus } = useAuth();
+  const { user} = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // Aguardar o setupStatus ser carregado
+    //if (setupStatus === null) return;
+
     if (!user) {
-      router.replace('/(auth)/welcome' as any);
+      router.replace('/(auth)/welcome');
       return;
     }
 
-    // Se o usuário está logado mas não fez o setup inicial
-    if (setupStatus && !setupStatus.setup_completed) {
-      router.replace('/budget-setup' as any);
-      return;
-    }
-  }, [user, setupStatus, router]);
+    // // Se o usuário está logado mas não fez o setup inicial
+    // if (!setupStatus.setup_completed) {
+    //   router.replace('/budget-setup');
+    //   return;
+    // }
+  }, [user, router]);
 
-  if (!user) {
-    return null;
-  }
+  // Mostrar loading enquanto verifica o status
+  // if (!user || setupStatus === null) {
+  //   return (
+  //     <View style={{ 
+  //       flex: 1, 
+  //       justifyContent: 'center', 
+  //       alignItems: 'center',
+  //       backgroundColor: COLORS.background 
+  //     }}>
+  //       <ActivityIndicator size="large" color={COLORS.primary} />
+  //     </View>
+  //   );
+  // }
 
-  // Se ainda não verificou o status ou setup não foi feito, não renderizar as tabs
-  if (!setupStatus || !setupStatus.setup_completed) {
-    return null;
-  }
+  // // Se setup não foi feito, não renderizar as tabs
+  // if (!setupStatus.setup_completed) {
+  //   return null;
+  // }
 
   return (
     <Tabs
@@ -67,4 +80,4 @@ export default function TabLayout() {
       />
     </Tabs>
   );
-}
+  }

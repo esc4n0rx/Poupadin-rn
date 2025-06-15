@@ -10,29 +10,16 @@ export interface Category {
   id?: string;
   name: string;
   allocated_amount: number;
-  color?: string;
+  color: string;
 }
 
 export interface BudgetSetupData {
-  name?: string;
-  incomes: Income[];
-  categories: Category[];
-}
-
-export interface Budget {
-  id: string;
   name: string;
-  total_income: number;
-  allocated_amount: number;
-  available_balance: number;
+  incomes: Omit<Income, 'id'>[];
+  categories: Omit<Category, 'id'>[];
 }
 
-export interface BudgetSetupResponse {
-  message: string;
-  budget: Budget;
-}
-
-export interface BudgetSetupStatus {
+export interface SetupStatus {
   setup_completed: boolean;
-  message: string;
+  has_budget: boolean;
 }

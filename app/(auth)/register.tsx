@@ -1,3 +1,4 @@
+// app/(auth)/register.tsx
 import { CustomButton } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomStatusBar } from '@/components/CustomStatusBar';
@@ -25,12 +26,12 @@ export default function RegisterScreen() {
   const { errors, validateRegisterForm, clearErrors } = useFormValidation();
   
   const [formData, setFormData] = useState<RegisterFormData>({
-    mobileNumber: '',
-    fullName: '',
+    name: '', // Mudança: era fullName
     email: '',
     dateOfBirth: '',
     password: '',
     confirmPassword: '',
+    mobileNumber: '', // Opcional
   });
 
   const handleInputChange = (field: keyof RegisterFormData, value: string) => {
@@ -48,7 +49,16 @@ export default function RegisterScreen() {
 
     try {
       await register(formData);
-      router.replace('/(tabs)');
+      Alert.alert(
+        'Sucesso!', 
+        'Conta criada com sucesso. Faça login para continuar.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.push('./login')
+          }
+        ]
+      );
     } catch (error) {
       Alert.alert('Erro', error instanceof Error ? error.message : 'Erro desconhecido');
     }
@@ -92,9 +102,9 @@ export default function RegisterScreen() {
             <CustomInput
               label="Nome Completo"
               placeholder="João Silva"
-              value={formData.fullName}
-              onChangeText={(value) => handleInputChange('fullName', value)}
-              error={errors.fullName}
+              value={formData.name}
+              onChangeText={(value) => handleInputChange('name', value)}
+              error={errors.name} // Mudança: era errors.fullName
               autoCapitalize="words"
               autoComplete="name"
             />
@@ -108,6 +118,14 @@ export default function RegisterScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+            />
+
+            <CustomInput
+              label="Telefone (Opcional)"
+              placeholder="(11) 99999-9999"
+              value={formData.mobileNumber || ''}
+              onChangeText={(value) => handleInputChange('mobileNumber', value)}
+              keyboardType="phone-pad"
             />
 
             <CustomInput
