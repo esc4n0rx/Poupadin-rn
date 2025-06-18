@@ -1,25 +1,33 @@
 // utils/errorHandler.ts
-export const getErrorMessage = (error: any, p0: string): string => {
+
+/**
+ * Extrai uma mensagem de erro significativa de um objeto de erro da API ou genérico.
+ * @param error - O objeto de erro capturado.
+ * @param defaultMessage - Uma mensagem padrão para usar como fallback.
+ * @returns A mensagem de erro formatada.
+ */
+export const getErrorMessage = (error: any, defaultMessage: string): string => {
+  // ✅ CORREÇÃO: Prioriza a extração de mensagens do corpo do erro da API.
+  if (error?.body && error?.status) {
+    // Se a API retornar um array de erros de validação, junta todos.
+    if (error.status === 400 && error.body.errors && Array.isArray(error.body.errors)) {
+      return error.body.errors.join('\n');
+    }
+    // Se não, usa a mensagem principal do corpo do erro.
+    if (error.body.message) {
+      return error.body.message;
+    }
+  }
+
+  // Fallback para objetos de erro padrão.
   if (error?.message) {
     return error.message;
   }
-  
+
   if (typeof error === 'string') {
     return error;
   }
-  
-  // Tratar diferentes tipos de erro da API
-  if (error?.status === 409) {
-    return 'Este e-mail já está em uso.';
-  }
-  
-  if (error?.status === 401) {
-    return 'Credenciais inválidas.';
-  }
-  
-  if (error?.status === 400) {
-    return error?.errors?.join(', ') || 'Erro de validação.';
-  }
-  
-  return 'Erro inesperado. Tente novamente.';
+
+  // Retorna a mensagem padrão se nenhuma outra puder ser extraída.
+  return defaultMessage || 'Erro inesperado. Tente novamente.';
 };

@@ -101,13 +101,13 @@ export default function BudgetSetupScreen() {
         {
           text: 'OK',
           onPress: async () => {
-            await updateSetupStatus();
+            // ✅ CORREÇÃO: Passando `true` para a função `updateSetupStatus`.
+            await updateSetupStatus(true);
             router.replace('/(tabs)');
           },
         },
       ]);
     } catch (error) {
-      // ✅ CORREÇÃO: Agora o erro é exibido em um Alert.
       const errorMessage = getErrorMessage(error, 'Não foi possível finalizar a configuração.');
       Alert.alert('Erro', errorMessage);
     } finally {
