@@ -13,6 +13,9 @@ interface AuthContextData {
   register: (data: RegisterFormData) => Promise<void>;
   logout: () => Promise<void>;
   updateSetupStatus: (status: boolean) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  verifyResetCode: (email: string, code: string) => Promise<void>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -80,6 +83,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+      await makeRequest('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: email }),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyResetCode = async (email: string, code: string) => {
+    setIsLoading(true);
+    try {
+      await makeRequest('/api/auth/verify-reset-code', {
+        method: 'POST',
+        body: JSON.stringify({ email, code }),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+    return makeRequest('/api/auth/verify-reset-code', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  };
+
+  const resetPassword = async (email: string, code: string, newPassword: string) => {
+    setIsLoading(true);
+    try {
+      await makeRequest('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          email, 
+          code, 
+          new_password: newPassword 
+        }),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+    return makeRequest('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        code, 
+        password: newPassword
+      }),
+    });
+  };
+
   const updateSetupStatus = async (status: boolean) => {
     if (user) {
       const updatedUser = { ...user, initial_setup_completed: status };
@@ -93,6 +147,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user,
     isLoading,
     setupCompleted: user?.initial_setup_completed ?? false,
+    forgotPassword,
+    verifyResetCode,
+    resetPassword,
     login,
     register,
     logout,
@@ -101,3 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+function makeRequest(arg0: string, arg1: { method: string; body: string; }) {
+    throw new Error('Function not implemented.');
+  }

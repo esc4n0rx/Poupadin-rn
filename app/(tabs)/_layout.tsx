@@ -1,15 +1,15 @@
 import { Tabs, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground'; // 2. Importado para o efeito de blur
-import { COLORS } from '@/constants/Theme';
+import TabBarBackground from '@/components/ui/TabBarBackground';
+import { COLORS, SIZES } from '@/constants/Theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * 3. Componente para o ícone da aba com o indicador de "fundo verde" animado.
+ * Componente para o ícone da aba com indicador circular verde animado
  */
 type ActiveTabIconProps = {
   focused: boolean;
@@ -19,21 +19,27 @@ type ActiveTabIconProps = {
 const ActiveTabIcon: React.FC<ActiveTabIconProps> = ({ focused, children }) => {
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      // Anima a opacidade para uma transição suave
-      opacity: withTiming(focused ? 1 : 0, { duration: 200 }),
+      opacity: withTiming(focused ? 1 : 0, { duration: 300 }),
+      transform: [
+        {
+          scale: withTiming(focused ? 1 : 0.8, { duration: 300 }),
+        },
+      ],
     };
   }, [focused]);
 
   return (
     <View style={styles.iconWrapper}>
       <Animated.View style={[styles.activeIndicator, animatedStyle]} />
-      {children}
+      <View style={styles.iconContainer}>
+        {children}
+      </View>
     </View>
   );
 };
 
 /**
- * Botão personalizado para a ação central.
+ * Botão personalizado para a ação central (Despesas)
  */
 interface CustomTabBarButtonProps {
   children: React.ReactNode;
@@ -41,17 +47,13 @@ interface CustomTabBarButtonProps {
 }
 
 const CustomTabBarButton: React.FC<CustomTabBarButtonProps> = ({ children, onPress }) => (
-  <Pressable
-    onPress={onPress}
-    style={({ pressed }) => [
-      styles.customButtonContainer,
-      pressed && styles.customButtonPressed,
-    ]}
-  >
+  <View style={styles.customButtonWrapper}>
     <View style={styles.customButton}>
-      {children}
+      <View style={styles.customButtonInner} onTouchEnd={onPress}>
+        {children}
+      </View>
     </View>
-  </Pressable>
+  </View>
 );
 
 export default function TabLayout() {
@@ -81,12 +83,13 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: '#95A5A6',
+        tabBarActiveTintColor: COLORS.text,
+        tabBarInactiveTintColor: COLORS.grayDark,
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarBackground: TabBarBackground,
+        tabBarHideOnKeyboard: true,
       }}>
       <Tabs.Screen
         name="index"
@@ -94,7 +97,7 @@ export default function TabLayout() {
           title: 'Início',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
-              <IconSymbol name="house.fill" size={28} color={color} />
+              <IconSymbol name="house.fill" size={24} color={color} />
             </ActiveTabIcon>
           ),
         }}
@@ -105,7 +108,7 @@ export default function TabLayout() {
           title: 'Objetivos',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
-              <IconSymbol name="chart.bar.fill" size={28} color={color} />
+              <IconSymbol name="chart.bar.fill" size={24} color={color} />
             </ActiveTabIcon>
           ),
         }}
@@ -113,10 +116,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Despesas',
+          title: '',
           tabBarLabel: () => null,
           tabBarIcon: () => (
-             <IconSymbol name="arrow.up.arrow.down" size={32} color={COLORS.white} />
+            <IconSymbol name="arrow.up.arrow.down" size={28} color={COLORS.white} />
           ),
           tabBarButton: (props) => (
             <CustomTabBarButton
@@ -140,10 +143,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Perfil',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
-              <IconSymbol name="person.fill" size={28} color={color} />
+              <IconSymbol name="person.fill" size={24} color={color} />
             </ActiveTabIcon>
           ),
         }}
@@ -167,57 +170,73 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     position: 'absolute',
-    bottom: 25,
-    left: 20,
-    right: 20,
-    // 2. Fundo transparente para que o efeito de blur seja visível.
-    backgroundColor: 'transparent', 
-    borderRadius: 15,
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: SIZES.radiusLarge,
     height: 70,
     borderTopWidth: 0,
+    elevation: 10,
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    paddingBottom: 0,
   },
   tabBarLabel: {
     fontSize: 11,
     fontWeight: '600',
-    paddingBottom: 5,
+    marginTop: 4,
+    marginBottom: 8,
   },
   iconWrapper: {
-    width: 60,
-    height: 34,
+    width: 50,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 17, // Raio para criar o formato de "pílula"
+    borderRadius: 25,
   },
   activeIndicator: {
     ...StyleSheet.absoluteFillObject,
-    // 3. Estilo do "fundo verde" para a aba ativa.
     backgroundColor: COLORS.primary,
-    borderRadius: 17,
-    opacity: 0.2, // Uma opacidade sutil para não ofuscar o ícone.
+    borderRadius: 25,
+    opacity: 0.15,
   },
-  customButtonContainer: {
-    // 1. Botão central foi levemente abaixado (de -30 para -22).
-    top: -22,
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customButtonWrapper: {
+    top: -15,
     justifyContent: 'center',
     alignItems: 'center',
   },
   customButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: COLORS.primary,
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.primary,
+    elevation: 8,
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
-   customButtonPressed: {
-    opacity: 0.9,
+  customButtonInner: {
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -1,4 +1,4 @@
-// Fallback for using MaterialIcons on Android and web.
+// Fallback para usar MaterialIcons no Android e web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight } from 'expo-symbols';
@@ -19,8 +19,9 @@ const MAPPING: IconMapping = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
 
-  // --- ÍCONES ADICIONADOS PARA A BARRA DE NAVEGAÇÃO ---
+  // --- ÍCONES PARA A BARRA DE NAVEGAÇÃO ---
   'chart.bar.fill': 'bar-chart',
+  'chart.bar.xaxis': 'bar-chart',
   'arrow.up.arrow.down': 'swap-vert', // Ícone para o botão central
   'wallet.pass.fill': 'account-balance-wallet',
   'person.fill': 'person',
