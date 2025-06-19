@@ -1,75 +1,84 @@
-// app/(tabs)/index.tsx
+
 import { CustomStatusBar } from '@/components/CustomStatusBar';
-import { ThemedText } from '@/components/ThemedText';
-import { COLORS, SIZES } from '@/constants/Theme';
+import { BalanceSummary } from '@/components/home/BalanceSummary';
+import { ExpenseProgressBar } from '@/components/home/ExpenseProgressBar';
+import { HomeHeader } from '@/components/home/HomeHeader';
+import { RecentGoalsCard } from '@/components/home/RecentGoalsCard';
+import { TransactionFilter } from '@/components/home/TransactionFilter';
+import { TransactionList } from '@/components/home/TransactionList';
+import { COLORS } from '@/constants/Theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'expo-router';
+import { useHomeData } from '@/hooks/useHomeData';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/(auth)/welcome');
-  };
-
-  // // Se o setup não foi completado, redirecionar
-  // if (setupStatus && !setupStatus.setup_completed) {
-  //   router.replace('/budget-setup');
-  //   return null;
-  // }
+  const {
+    budget,
+    transactions,
+    isLoading,
+    error,
+    selectedPeriod,
+    handlePeriodChange,
+    refreshData,
+  } = useHomeData();
 
   return (
     <View style={styles.container}>
       <CustomStatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
       
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <ThemedText type="title" style={styles.welcomeText}>
-          Olá, {user?.name|| 'Usuário'}! 👋
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Bem-vindo ao Poupadin
-        </ThemedText>
-      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refreshData} tintColor={COLORS.primary} />
+        }
+      >
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <HomeHeader name={user?.name || 'Usuário'} />
+          {budget && (
+            <>
+              <BalanceSummary
+                totalBalance={budget.total_income ?? 0}
+                totalExpense={budget.total_expense ?? 0}
+              />
+              <ExpenseProgressBar
+                totalAmount={budget.total_income ?? 0}
+                spentAmount={budget.total_expense ?? 0}
+              />
+            </>
+          )}
+        </View>
 
-      <View style={styles.content}>
-        <View style={styles.constructionContainer}>
-          <Text style={styles.constructionEmoji}>🚧</Text>
-          <ThemedText style={styles.constructionTitle}>
-            App em Construção
-          </ThemedText>
-          <ThemedText style={styles.constructionDescription}>
-            Parabéns! Você completou o setup inicial do seu orçamento. 
-            Estamos trabalhando duro para trazer novas funcionalidades em breve!
-          </ThemedText>
-          
-          <View style={styles.comingSoonContainer}>
-            <Text style={styles.comingSoonTitle}>Em breve:</Text>
-            <Text style={styles.comingSoonItem}>💰 Dashboard financeiro</Text>
-            <Text style={styles.comingSoonItem}>📊 Relatórios detalhados</Text>
-            <Text style={styles.comingSoonItem}>🎯 Metas de economia</Text>
-            <Text style={styles.comingSoonItem}>📱 Notificações inteligentes</Text>
+        {isLoading && !budget ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
           </View>
-        </View>
-        
-        <View style={styles.userInfo}>
-          <ThemedText style={styles.infoLabel}>Email:</ThemedText>
-          <ThemedText style={styles.infoValue}>{user?.email}</ThemedText>
-          
-          
-          <ThemedText style={styles.infoLabel}>Data de Nascimento:</ThemedText>
-          <ThemedText style={styles.infoValue}>{user?.date_of_birth}</ThemedText>
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Sair</Text>
-        </TouchableOpacity>
-      </View>
+        ) : error ? (
+          <View style={styles.centered}><Text style={styles.errorText}>{error}</Text></View>
+        ) : !budget ? (
+           <View style={styles.centered}><Text style={styles.emptyText}>Nenhum orçamento encontrado.</Text></View>
+        ) : (
+          <View style={styles.contentContainer}>
+            <RecentGoalsCard />
+            <TransactionFilter
+              selectedPeriod={selectedPeriod}
+              onSelectPeriod={handlePeriodChange}
+            />
+            <TransactionList transactions={transactions} categories={budget.budget_categories || []} />
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -81,111 +90,25 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 40,
-    paddingHorizontal: SIZES.paddingHorizontal,
-    borderBottomLeftRadius: SIZES.radiusLarge,
-    borderBottomRightRadius: SIZES.radiusLarge,
+    paddingBottom: 70, 
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  welcomeText: {
-    color: COLORS.white,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: COLORS.white,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  content: {
+  contentContainer: {
     flex: 1,
-    paddingHorizontal: SIZES.paddingHorizontal,
-    paddingTop: 30,
+    marginTop: -50,
   },
-  constructionContainer: {
-    backgroundColor: COLORS.white,
-    padding: 30,
-    borderRadius: SIZES.radiusLarge,
+  centered: {
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
-    shadowColor: COLORS.black,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  constructionEmoji: {
-    fontSize: 60,
-    marginBottom: 20,
-  },
-  constructionTitle: {
-    fontSize: SIZES.h3,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  constructionDescription: {
-    fontSize: SIZES.body2,
-    color: COLORS.textLight,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  comingSoonContainer: {
-    alignItems: 'flex-start',
-    width: '100%',
-  },
-  comingSoonTitle: {
-    fontSize: SIZES.body1,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 12,
-  },
-  comingSoonItem: {
-    fontSize: SIZES.body2,
-    color: COLORS.textLight,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  userInfo: {
-    backgroundColor: COLORS.white,
     padding: 20,
-    borderRadius: SIZES.radius,
-    marginBottom: 30,
-    shadowColor: COLORS.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginTop: 50,
   },
-  infoLabel: {
-    fontSize: SIZES.body3,
+  errorText: {
+    color: COLORS.error,
+    textAlign: 'center',
+  },
+  emptyText: {
     color: COLORS.textLight,
-    marginBottom: 4,
-    marginTop: 12,
-  },
-  infoValue: {
-    fontSize: SIZES.body2,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  logoutButton: {
-    backgroundColor: COLORS.error,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: SIZES.radius,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  logoutButtonText: {
-    color: COLORS.white,
-    fontSize: SIZES.body1,
-    fontWeight: '600',
   },
 });

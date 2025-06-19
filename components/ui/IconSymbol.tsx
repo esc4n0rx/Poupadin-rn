@@ -1,30 +1,31 @@
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
+import { SymbolWeight } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
+// O 'name' aqui é uma string para maior flexibilidade com os nomes dos SFSymbols
+type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
- * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
+ * Mapeamento de SF Symbols para Material Icons.
  */
-const MAPPING = {
+const MAPPING: IconMapping = {
+  // Ícones existentes
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-} as IconMapping;
 
-/**
- * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
- * This ensures a consistent look across platforms, and optimal resource usage.
- * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
- */
+  // --- ÍCONES ADICIONADOS PARA A BARRA DE NAVEGAÇÃO ---
+  'chart.bar.fill': 'bar-chart',
+  'arrow.up.arrow.down': 'swap-vert', // Ícone para o botão central
+  'wallet.pass.fill': 'account-balance-wallet',
+  'person.fill': 'person',
+};
+
 export function IconSymbol({
   name,
   size = 24,
@@ -37,5 +38,11 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  const iconName = MAPPING[name];
+  if (!iconName) {
+    // Fallback para ícones não mapeados
+    console.warn(`IconSymbol: Mapeamento não encontrado para o SF Symbol "${name}".`);
+    return <MaterialIcons name="help-outline" size={size} color={color as string} style={style} />;
+  }
+  return <MaterialIcons name={iconName} size={size} color={color as string} style={style} />;
 }
