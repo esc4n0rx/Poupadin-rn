@@ -1,3 +1,4 @@
+// components/CustomInput.tsx
 import { COLORS, SIZES } from '@/constants/Theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
@@ -58,6 +59,10 @@ export const CustomInput: React.FC<CustomInputProps> = ({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholderTextColor={COLORS.grayDark}
+          // ✅ Configurações melhoradas para o teclado
+          blurOnSubmit={!props.multiline} // Não blur em multiline
+          returnKeyType={props.returnKeyType || (props.multiline ? 'default' : 'done')}
+          enablesReturnKeyAutomatically={true}
           {...props}
         />
         {isPassword && (

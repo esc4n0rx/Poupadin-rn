@@ -24,6 +24,13 @@ const MAPPING: IconMapping = {
   'arrow.up.arrow.down': 'swap-vert', // Ícone para o botão central
   'wallet.pass.fill': 'account-balance-wallet',
   'person.fill': 'person',
+
+  // --- ÍCONES PARA GOALS ---
+  'flag.fill': 'flag',
+  'flag-outline': 'outlined-flag',
+  'target': 'gps-fixed',
+  'trophy.fill': 'emoji-events',
+  'chart.line.uptrend.xyaxis': 'trending-up',
 };
 
 export function IconSymbol({

@@ -86,7 +86,6 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
-        // 2. Usa o componente de blur como fundo da barra
         tabBarBackground: TabBarBackground,
       }}>
       <Tabs.Screen
@@ -103,7 +102,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="stats"
         options={{
-          title: 'Stats',
+          title: 'Objetivos',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
               <IconSymbol name="chart.bar.fill" size={28} color={color} />
@@ -112,7 +111,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore" // Botão central de Despesas
+        name="explore"
         options={{
           title: 'Despesas',
           tabBarLabel: () => null,
