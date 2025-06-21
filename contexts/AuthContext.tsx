@@ -1,3 +1,4 @@
+// contexts/AuthContext.tsx (adicionando funcionalidades do perfil)
 // contexts/AuthContext.tsx
 import { apiService } from '@/services/apiService';
 import { tokenService } from '@/services/tokenService';
