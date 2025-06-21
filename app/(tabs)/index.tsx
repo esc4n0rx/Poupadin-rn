@@ -1,4 +1,3 @@
-
 import { CustomStatusBar } from '@/components/CustomStatusBar';
 import { BalanceSummary } from '@/components/home/BalanceSummary';
 import { ExpenseProgressBar } from '@/components/home/ExpenseProgressBar';
@@ -33,6 +32,30 @@ export default function HomeScreen() {
     refreshData,
   } = useHomeData();
 
+  // ✅ CORREÇÃO: Verificações de segurança adicionais
+  const userName = user?.name || null;
+  const safeBudget = budget || null;
+  const safeTransactions = transactions || [];
+  const safeCategories = safeBudget?.budget_categories || [];
+
+  // ✅ CORREÇÃO: Log para debug quando há erro
+  React.useEffect(() => {
+    if (error) {
+      console.error('🔴 Erro na HomeScreen:', error);
+    }
+    
+    console.log('📊 Estado da HomeScreen:', {
+      user: user ? { name: user.name, id: user.id } : null,
+      budget: safeBudget ? { 
+        id: safeBudget.id, 
+        categoriesCount: safeCategories.length 
+      } : null,
+      transactionsCount: safeTransactions.length,
+      isLoading,
+      error
+    });
+  }, [user, safeBudget, safeTransactions, isLoading, error]);
+
   return (
     <View style={styles.container}>
       <CustomStatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
@@ -45,29 +68,36 @@ export default function HomeScreen() {
         }
       >
         <View style={[styles.header, { paddingTop: insets.top }]}>
-          <HomeHeader name={user?.name || 'Usuário'} />
-          {budget && (
+          {/* ✅ CORREÇÃO: Sempre renderizar o header, mesmo sem user */}
+          <HomeHeader name={userName} />
+          
+          {/* ✅ CORREÇÃO: Verificação segura do budget */}
+          {safeBudget && (
             <>
               <BalanceSummary
-                totalBalance={budget.total_income ?? 0}
-                totalExpense={budget.total_expense ?? 0}
+                totalBalance={safeBudget.total_income || 0}
+                totalExpense={safeBudget.total_expense || 0}
               />
               <ExpenseProgressBar
-                totalAmount={budget.total_income ?? 0}
-                spentAmount={budget.total_expense ?? 0}
+                totalAmount={safeBudget.total_income || 0}
+                spentAmount={safeBudget.total_expense || 0}
               />
             </>
           )}
         </View>
 
-        {isLoading && !budget ? (
+        {isLoading && !safeBudget ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={COLORS.primary} />
           </View>
         ) : error ? (
-          <View style={styles.centered}><Text style={styles.errorText}>{error}</Text></View>
-        ) : !budget ? (
-           <View style={styles.centered}><Text style={styles.emptyText}>Nenhum orçamento encontrado.</Text></View>
+          <View style={styles.centered}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : !safeBudget ? (
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>Nenhum orçamento encontrado.</Text>
+          </View>
         ) : (
           <View style={styles.contentContainer}>
             <RecentGoalsCard />
@@ -75,7 +105,11 @@ export default function HomeScreen() {
               selectedPeriod={selectedPeriod}
               onSelectPeriod={handlePeriodChange}
             />
-            <TransactionList transactions={transactions} categories={budget.budget_categories || []} />
+            {/* ✅ CORREÇÃO: Verificação extra antes de renderizar TransactionList */}
+            <TransactionList 
+              transactions={safeTransactions} 
+              categories={safeCategories}
+            />
           </View>
         )}
       </ScrollView>

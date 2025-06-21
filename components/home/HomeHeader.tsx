@@ -5,15 +5,18 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface HomeHeaderProps {
-  name: string;
+  name?: string | null;
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({ name }) => {
+  // ✅ CORREÇÃO: Verificação segura do nome do usuário
+  const displayName = name?.trim() || 'Usuário';
+
   return (
     <View style={styles.container}>
       <View>
         <Text style={styles.greeting}>Olá, Bem-vindo de Volta</Text>
-        <Text style={styles.userName}>{name}</Text>
+        <Text style={styles.userName} numberOfLines={1}>{displayName}</Text>
       </View>
       <TouchableOpacity
         style={styles.notificationButton}
@@ -43,6 +46,7 @@ const styles = StyleSheet.create({
     fontSize: SIZES.h2,
     color: COLORS.white,
     fontWeight: 'bold',
+    maxWidth: 200, // ✅ ADIÇÃO: Limitar largura para evitar overflow
   },
   notificationButton: {
     padding: 8,

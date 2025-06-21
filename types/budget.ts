@@ -32,15 +32,19 @@ export interface Budget {
   incomes: Income[];
 }
 
+export type TransactionType = 'income' | 'expense' | 'transfer_out' | 'transfer_in';
+
 export interface Transaction {
   id: string;
   description: string;
   amount: number;
-  transaction_type: 'income' | 'expense';
+  transaction_type: TransactionType;
   created_at: string;
   budget_categories: { 
     name: string;
   };
+  from_category_id?: string;
+  to_category_id?: string;
 }
 
 export interface ExpensePayload {

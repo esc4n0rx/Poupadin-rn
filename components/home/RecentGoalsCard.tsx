@@ -1,9 +1,19 @@
-// components/home/RecentGoalsCard.tsx
 import { COLORS, SIZES } from '@/constants/Theme';
 import { useGoals } from '@/hooks/useGoals';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  SlideInRight,
+  SlideOutLeft,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming
+} from 'react-native-reanimated';
 
 const formatCurrency = (value: number) => {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -19,97 +29,98 @@ const getGoalIcon = (goalName: string) => {
   return 'flag-outline';
 };
 
-export const RecentGoalsCard = () => {
-  const { goals, statistics, isLoading } = useGoals();
-  const [currentGoalIndex, setCurrentGoalIndex] = useState(0);
+const AnimatedGoalContent: React.FC<{
+  goal: any;
+  remainingAmount: number;
+  onMount: () => void;
+}> = ({ goal, remainingAmount, onMount }) => {
+  const progressAnimation = useSharedValue(0);
+  const pulseAnimation = useSharedValue(1);
 
-  // Filtrar apenas objetivos ativos
-  const activeGoals = goals.filter(goal => goal.is_active && !goal.is_completed);
-
-  // Rotacionar entre os objetivos a cada 4 segundos
   useEffect(() => {
-    if (activeGoals.length <= 1) return;
+    onMount();
+    
+    progressAnimation.value = withTiming(goal.progress / 100, {
+      duration: 1000,
+      easing: Easing.out(Easing.cubic),
+    });
 
-    const interval = setInterval(() => {
-      setCurrentGoalIndex((prevIndex) => 
-        (prevIndex + 1) % activeGoals.length
-      );
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [activeGoals.length]);
-
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.leftColumn}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="flag-outline" size={32} color={COLORS.primary} />
-          </View>
-          <Text style={styles.title}>Carregando...</Text>
-          <Text style={styles.subtitle}>Objetivos</Text>
-        </View>
-        <View style={styles.separator} />
-        <View style={styles.rightColumn}>
-          <Text style={styles.loadingText}>Carregando dados...</Text>
-        </View>
-      </View>
+    pulseAnimation.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 1000 }),
+        withTiming(1, { duration: 1000 })
+      ),
+      -1,
+      true
     );
-  }
+  }, [goal.id]);
 
-  if (activeGoals.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.leftColumn}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="flag-outline" size={32} color={COLORS.primary} />
-          </View>
-          <Text style={styles.title}>Meus Objetivos</Text>
-          <Text style={styles.subtitle}>Sem objetivos ativos</Text>
-        </View>
-        <View style={styles.separator} />
-        <View style={styles.rightColumn}>
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Crie seu primeiro objetivo</Text>
-            <Text style={styles.emptySubtext}>e comece a poupar!</Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
+  const progressBarStyle = useAnimatedStyle(() => {
+    return {
+      width: `${progressAnimation.value * 100}%`,
+      backgroundColor: goal.color,
+    };
+  });
 
-  const currentGoal = activeGoals[currentGoalIndex];
-  const remainingAmount = currentGoal.target_amount - currentGoal.current_amount;
+  const iconStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: pulseAnimation.value }],
+    };
+  });
 
   return (
-    <View style={styles.container}>
+    <Animated.View
+      style={styles.goalContent}
+      entering={SlideInRight.duration(500).easing(Easing.out(Easing.cubic))}
+      exiting={SlideOutLeft.duration(300).easing(Easing.in(Easing.cubic))}
+    >
       <View style={styles.leftColumn}>
-        <View style={[styles.iconContainer, { backgroundColor: `${currentGoal.color}20` }]}>
+        <Animated.View 
+          style={[
+            styles.iconContainer, 
+            { backgroundColor: `${goal.color}20` },
+            iconStyle
+          ]}
+        >
           <Ionicons 
-            name={getGoalIcon(currentGoal.name)} 
+            name={getGoalIcon(goal.name)} 
             size={32} 
-            color={currentGoal.color} 
+            color={goal.color} 
           />
-        </View>
-        <Text style={styles.title} numberOfLines={1}>{currentGoal.name}</Text>
-        <Text style={styles.subtitle}>
-          {activeGoals.length > 1 && `${currentGoalIndex + 1}/${activeGoals.length} • `}
-          {currentGoal.progress.toFixed(1)}% concluído
-        </Text>
+        </Animated.View>
+        <Animated.Text 
+          style={styles.title} 
+          numberOfLines={1}
+          entering={FadeIn.delay(200).duration(400)}
+        >
+          {goal.name}
+        </Animated.Text>
+        <Animated.Text 
+          style={styles.subtitle}
+          entering={FadeIn.delay(300).duration(400)}
+        >
+          {goal.progress.toFixed(1)}% concluído
+        </Animated.Text>
       </View>
       
       <View style={styles.separator} />
       
       <View style={styles.rightColumn}>
-        <View style={styles.itemRow}>
+        <Animated.View 
+          style={styles.itemRow}
+          entering={FadeIn.delay(400).duration(400)}
+        >
           <Ionicons name="wallet-outline" size={22} color={COLORS.success} />
           <View style={styles.itemTextContainer}>
             <Text style={styles.itemTitle}>Valor Atual</Text>
-            <Text style={styles.itemValue}>{formatCurrency(currentGoal.current_amount)}</Text>
+            <Text style={styles.itemValue}>{formatCurrency(goal.current_amount)}</Text>
           </View>
-        </View>
+        </Animated.View>
         
-        <View style={styles.itemRow}>
+        <Animated.View 
+          style={styles.itemRow}
+          entering={FadeIn.delay(500).duration(400)}
+        >
           <Ionicons name="trending-up-outline" size={22} color={COLORS.primary} />
           <View style={styles.itemTextContainer}>
             <Text style={styles.itemTitle}>
@@ -122,44 +133,215 @@ export const RecentGoalsCard = () => {
               {remainingAmount > 0 ? formatCurrency(remainingAmount) : '🎉'}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Barra de progresso */}
-        <View style={styles.progressContainer}>
+        <Animated.View 
+          style={styles.progressContainer}
+          entering={FadeIn.delay(600).duration(400)}
+        >
           <View style={styles.progressBackground}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { 
-                  width: `${Math.min(currentGoal.progress, 100)}%`,
-                  backgroundColor: currentGoal.color
-                }
-              ]} 
-            />
+            <Animated.View style={[styles.progressFill, progressBarStyle]} />
           </View>
-        </View>
+        </Animated.View>
+      </View>
+    </Animated.View>
+  );
+};
 
-        {/* Estatísticas gerais quando há apenas um objetivo */}
-        {activeGoals.length === 1 && statistics && (
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{statistics.completed_goals}</Text>
-              <Text style={styles.statLabel}>Concluídos</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatCurrency(statistics.total_saved)}</Text>
-              <Text style={styles.statLabel}>Total Poupado</Text>
-            </View>
+const GoalIndicator: React.FC<{
+  total: number;
+  current: number;
+}> = ({ total, current }) => {
+  if (total <= 1) return null;
+
+  return (
+    <Animated.View 
+      style={styles.indicatorContainer}
+      entering={FadeIn.delay(800).duration(400)}
+    >
+      {Array.from({ length: total }).map((_, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.indicator,
+            index === current && styles.indicatorActive,
+          ]}
+        />
+      ))}
+    </Animated.View>
+  );
+};
+
+export const RecentGoalsCard = () => {
+  const { goals, statistics, isLoading } = useGoals();
+  const [currentGoalIndex, setCurrentGoalIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const cardScale = useSharedValue(1);
+  const cardOpacity = useSharedValue(1);
+
+
+  const activeGoals = goals.filter(goal => goal.is_active && !goal.is_completed);
+
+  useEffect(() => {
+    if (activeGoals.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      
+      cardScale.value = withSequence(
+        withTiming(0.98, { duration: 150 }),
+        withTiming(1, { duration: 150 })
+      );
+
+      setTimeout(() => {
+        setCurrentGoalIndex((prevIndex) => 
+          (prevIndex + 1) % activeGoals.length
+        );
+        setIsTransitioning(false);
+      }, 300);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [activeGoals.length]);
+
+  const cardAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: cardScale.value }],
+      opacity: cardOpacity.value,
+    };
+  });
+
+  if (isLoading) {
+    return (
+      <Animated.View 
+        style={[styles.container, styles.loadingContainer]}
+        entering={FadeIn.duration(600)}
+      >
+        <View style={styles.leftColumn}>
+          <Animated.View 
+            style={styles.iconContainer}
+            entering={FadeIn.duration(400)}
+          >
+            <Ionicons name="flag-outline" size={32} color={COLORS.primary} />
+          </Animated.View>
+          <Animated.Text 
+            style={styles.title}
+            entering={FadeIn.delay(200).duration(400)}
+          >
+            Carregando...
+          </Animated.Text>
+          <Animated.Text 
+            style={styles.subtitle}
+            entering={FadeIn.delay(300).duration(400)}
+          >
+            Objetivos
+          </Animated.Text>
+        </View>
+        <View style={styles.separator} />
+        <View style={styles.rightColumn}>
+          <Animated.Text 
+            style={styles.loadingText}
+            entering={FadeIn.delay(400).duration(400)}
+          >
+            Carregando dados...
+          </Animated.Text>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  if (activeGoals.length === 0) {
+    return (
+      <Animated.View 
+        style={styles.container}
+        entering={FadeIn.duration(600)}
+      >
+        <View style={styles.leftColumn}>
+          <Animated.View 
+            style={styles.iconContainer}
+            entering={FadeIn.duration(400)}
+          >
+            <Ionicons name="flag-outline" size={32} color={COLORS.primary} />
+          </Animated.View>
+          <Animated.Text 
+            style={styles.title}
+            entering={FadeIn.delay(200).duration(400)}
+          >
+            Meus Objetivos
+          </Animated.Text>
+          <Animated.Text 
+            style={styles.subtitle}
+            entering={FadeIn.delay(300).duration(400)}
+          >
+            Sem objetivos ativos
+          </Animated.Text>
+        </View>
+        <View style={styles.separator} />
+        <View style={styles.rightColumn}>
+          <Animated.View 
+            style={styles.emptyState}
+            entering={FadeIn.delay(400).duration(600)}
+          >
+            <Text style={styles.emptyText}>Crie seu primeiro objetivo</Text>
+            <Text style={styles.emptySubtext}>e comece a poupar!</Text>
+          </Animated.View>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  const currentGoal = activeGoals[currentGoalIndex];
+  const remainingAmount = currentGoal.target_amount - currentGoal.current_amount;
+
+  return (
+    <Animated.View 
+      style={[styles.container, cardAnimatedStyle]}
+      entering={FadeIn.duration(800)}
+    >
+      <Animated.View 
+        style={styles.headerContainer}
+        entering={FadeIn.delay(100).duration(400)}
+      >
+        {activeGoals.length > 1 && (
+          <View style={styles.counterContainer}>
+            <Text style={styles.counterText}>
+              {currentGoalIndex + 1} de {activeGoals.length}
+            </Text>
           </View>
         )}
-      </View>
-    </View>
+        <GoalIndicator total={activeGoals.length} current={currentGoalIndex} />
+      </Animated.View>
+
+      <AnimatedGoalContent
+        key={currentGoal.id}
+        goal={currentGoal}
+        remainingAmount={remainingAmount}
+        onMount={() => {
+        }}
+      />
+
+      {activeGoals.length === 1 && statistics && (
+        <Animated.View 
+          style={styles.statsRow}
+          entering={FadeIn.delay(700).duration(600)}
+        >
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{statistics.completed_goals}</Text>
+            <Text style={styles.statLabel}>Concluídos</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{formatCurrency(statistics.total_saved)}</Text>
+            <Text style={styles.statLabel}>Total Poupado</Text>
+          </View>
+        </Animated.View>
+      )}
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     backgroundColor: COLORS.white,
     borderRadius: SIZES.radiusLarge,
     padding: SIZES.padding,
@@ -170,7 +352,49 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    minHeight: 120,
+    minHeight: 160,
+  },
+  loadingContainer: {
+    opacity: 0.8,
+  },
+  // ✅ NOVO: Header com contador
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    minHeight: 20,
+  },
+  counterContainer: {
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  counterText: {
+    fontSize: SIZES.body4,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  // ✅ NOVO: Indicadores de navegação
+  indicatorContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  indicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.grayLight,
+  },
+  indicatorActive: {
+    backgroundColor: COLORS.primary,
+    width: 16,
+  },
+  // ✅ MELHORADO: Container principal do objetivo
+  goalContent: {
+    flexDirection: 'row',
+    flex: 1,
   },
   leftColumn: {
     flex: 1,
@@ -234,6 +458,7 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: COLORS.grayLight,
     borderRadius: 3,
+    overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
@@ -242,7 +467,10 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 8,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.inputBorder,
   },
   statItem: {
     alignItems: 'center',
