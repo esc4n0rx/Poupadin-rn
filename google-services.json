@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "504063266167",
+    "project_id": "poupadin-app",
+    "storage_bucket": "poupadin-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:504063266167:android:cfb58efa91e85b27826572",
+        "android_client_info": {
+          "package_name": "com.poupadin.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHhEMHE4wQsGomqWeCWci--md7wMlLwCQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

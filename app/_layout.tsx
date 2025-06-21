@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { pushNotificationService } from '@/services/pushNotificationService';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -18,8 +19,19 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       setIsReady(true);
+      // Inicializar push notifications quando o app carregar
+      initializePushNotifications();
     }
   }, [loaded]);
+
+  const initializePushNotifications = async () => {
+    try {
+      await pushNotificationService.initialize();
+      console.log('Push notifications inicializadas com sucesso');
+    } catch (error) {
+      console.error('Erro ao inicializar push notifications:', error);
+    }
+  };
 
   if (!isReady) {
     return null;
