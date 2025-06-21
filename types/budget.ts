@@ -7,6 +7,7 @@ export interface Income {
 }
 
 export interface Category {
+  transaction_count: number;
   id?: string;
   name: string;
   allocated_amount: number;
