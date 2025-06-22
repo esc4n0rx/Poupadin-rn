@@ -8,11 +8,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconSymbol } from './ui/IconSymbol';
 
 const ICON_MAPPING: { [key: string]: string } = {
-  index: 'house.fill',
-  stats: 'chart.bar.xaxis',
-  explore: 'arrow.up.arrow.down',
-  wallet: 'wallet.pass.fill',
-  profile: 'person.fill',
+  index: 'house.fill',           // Início
+  goals: 'chart.bar.xaxis',      // Objetivos
+  explore: 'arrow.up.arrow.down', // Despesas (centro)
+  budget: 'wallet.pass.fill',     // Categorias  
+  profile: 'person.fill',        // Perfil
 };
 
 export const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
@@ -66,7 +66,7 @@ export const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarPro
                 key={route.key}
                 accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
-                accessibilityLabel={options.tabBarAccessibilityLabel || label}
+                accessibilityLabel={options.tabBarAccessibilityLabel || 'Registrar Despesa'}
                 onPress={onPress}
                 onLongPress={onLongPress}
                 style={styles.centerButtonWrapper}
