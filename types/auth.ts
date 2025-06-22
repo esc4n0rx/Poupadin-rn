@@ -5,12 +5,12 @@ export interface LoginFormData {
 }
 
 export interface RegisterFormData {
-  name: string; // Mudança: era fullName
+  name: string;
   email: string;
-  dateOfBirth: string; // Será convertido para date_of_birth
+  dateOfBirth: string;
   password: string;
   confirmPassword: string;
-  mobileNumber?: string; // Opcional, não será enviado para API
+  mobileNumber?: string; // Removido daqui, mantido apenas para compatibilidade se algum código ainda referenciar
 }
 
 export interface ForgotPasswordFormData {

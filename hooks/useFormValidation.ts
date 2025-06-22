@@ -1,5 +1,6 @@
 // hooks/useFormValidation.ts
 import { ForgotPasswordFormData, LoginFormData, RegisterFormData, ResetPasswordFormData } from '@/types/auth';
+import { validateBrazilianDate } from '@/utils/dateUtils';
 import { useState } from 'react';
 
 interface ValidationErrors {
@@ -11,32 +12,30 @@ export const useFormValidation = () => {
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const isValid = emailRegex.test(email);
+    console.log(`📧 [VALIDATION] Email "${email}" válido:`, isValid);
+    return isValid;
   };
 
   const validateDate = (date: string): boolean => {
-    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-    if (!dateRegex.test(date)) return false;
-    
-    const [day, month, year] = date.split('/').map(Number);
-    const dateObj = new Date(year, month - 1, day);
-    
-    return dateObj.getFullYear() === year &&
-           dateObj.getMonth() === month - 1 &&
-           dateObj.getDate() === day &&
-           year >= 1900 &&
-           year <= new Date().getFullYear() - 13;
+    console.log(`📅 [VALIDATION] Validando data: "${date}"`);
+    return validateBrazilianDate(date);
   };
 
   const validatePassword = (password: string): boolean => {
-    return password.length >= 8;
+    const isValid = password.length >= 8;
+    console.log(`🔒 [VALIDATION] Senha (${password.length} chars) válida:`, isValid);
+    return isValid;
   };
 
   const validateName = (name: string): boolean => {
-    return name.trim().length >= 3;
+    const isValid = name.trim().length >= 3;
+    console.log(`👤 [VALIDATION] Nome "${name}" (${name.trim().length} chars) válido:`, isValid);
+    return isValid;
   };
 
   const validateLoginForm = (data: LoginFormData): boolean => {
+    console.log('🔍 [VALIDATION] Iniciando validação do form de login:', data);
     const newErrors: ValidationErrors = {};
 
     if (!data.email.trim()) {
@@ -51,46 +50,85 @@ export const useFormValidation = () => {
       newErrors.password = 'Senha deve ter pelo menos 8 caracteres';
     }
 
+    console.log('📊 [VALIDATION] Erros encontrados no login:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateRegisterForm = (data: RegisterFormData): boolean => {
+    console.log('🔍 [VALIDATION] Iniciando validação do form de registro:', data);
     const newErrors: ValidationErrors = {};
 
-    // Validar nome (mudança: era fullName)
+    // Validar nome
+    console.log('👤 [VALIDATION] Validando nome...');
     if (!data.name.trim()) {
+      console.log('❌ [VALIDATION] Nome vazio');
       newErrors.name = 'Nome é obrigatório';
     } else if (!validateName(data.name)) {
+      console.log('❌ [VALIDATION] Nome muito curto');
       newErrors.name = 'Nome deve ter pelo menos 3 caracteres';
+    } else {
+      console.log('✅ [VALIDATION] Nome válido');
     }
 
+    // Validar email
+    console.log('📧 [VALIDATION] Validando email...');
     if (!data.email.trim()) {
+      console.log('❌ [VALIDATION] Email vazio');
       newErrors.email = 'Email é obrigatório';
     } else if (!validateEmail(data.email)) {
+      console.log('❌ [VALIDATION] Email inválido');
       newErrors.email = 'Email inválido';
+    } else {
+      console.log('✅ [VALIDATION] Email válido');
     }
 
+    // Validar data de nascimento
+    console.log('📅 [VALIDATION] Validando data de nascimento...');
     if (!data.dateOfBirth.trim()) {
+      console.log('❌ [VALIDATION] Data vazia');
       newErrors.dateOfBirth = 'Data de nascimento é obrigatória';
     } else if (!validateDate(data.dateOfBirth)) {
+      console.log('❌ [VALIDATION] Data inválida');
       newErrors.dateOfBirth = 'Data inválida (DD/MM/AAAA) - Mínimo 13 anos';
+    } else {
+      console.log('✅ [VALIDATION] Data válida');
     }
 
+    // Validar senha
+    console.log('🔒 [VALIDATION] Validando senha...');
     if (!data.password) {
+      console.log('❌ [VALIDATION] Senha vazia');
       newErrors.password = 'Senha é obrigatória';
     } else if (!validatePassword(data.password)) {
+      console.log('❌ [VALIDATION] Senha muito curta');
       newErrors.password = 'Senha deve ter pelo menos 8 caracteres';
+    } else {
+      console.log('✅ [VALIDATION] Senha válida');
     }
 
+    // Validar confirmação de senha
+    console.log('🔒 [VALIDATION] Validando confirmação de senha...');
     if (!data.confirmPassword) {
+      console.log('❌ [VALIDATION] Confirmação vazia');
       newErrors.confirmPassword = 'Confirmação de senha é obrigatória';
     } else if (data.password !== data.confirmPassword) {
+      console.log('❌ [VALIDATION] Senhas não coincidem');
+      console.log(`🔒 [VALIDATION] Senha: "${data.password}"`);
+      console.log(`🔒 [VALIDATION] Confirmação: "${data.confirmPassword}"`);
       newErrors.confirmPassword = 'Senhas não coincidem';
+    } else {
+      console.log('✅ [VALIDATION] Confirmação de senha válida');
     }
 
+    console.log('📊 [VALIDATION] Erros encontrados no registro:', newErrors);
+    console.log('📊 [VALIDATION] Total de erros:', Object.keys(newErrors).length);
+    
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    console.log('📊 [VALIDATION] Formulário válido:', isValid);
+    
+    return isValid;
   };
 
   const validateForgotPasswordForm = (data: ForgotPasswordFormData): boolean => {
@@ -132,6 +170,7 @@ export const useFormValidation = () => {
   };
 
   const clearErrors = () => {
+    console.log('🧹 [VALIDATION] Limpando erros');
     setErrors({});
   };
 

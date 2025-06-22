@@ -6,6 +6,7 @@ import { COLORS, SIZES } from '@/constants/Theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { RegisterFormData } from '@/types/auth';
+import { getErrorMessage } from '@/utils/errorHandler';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -26,15 +27,15 @@ export default function RegisterScreen() {
   const { errors, validateRegisterForm, clearErrors } = useFormValidation();
   
   const [formData, setFormData] = useState<RegisterFormData>({
-    name: '', // Mudança: era fullName
+    name: '',
     email: '',
     dateOfBirth: '',
     password: '',
     confirmPassword: '',
-    mobileNumber: '', // Opcional
   });
 
   const handleInputChange = (field: keyof RegisterFormData, value: string) => {
+    console.log(`🔄 [REGISTER] Campo alterado: ${field} = "${value}"`);
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -43,28 +44,84 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-    if (!validateRegisterForm(formData)) {
+    console.log('🚀 [REGISTER] Iniciando processo de registro...');
+    console.log('📋 [REGISTER] Dados do formulário:', JSON.stringify(formData, null, 2));
+    console.log('🔍 [REGISTER] Erros atuais antes da validação:', JSON.stringify(errors, null, 2));
+
+    // Validação do formulário
+    console.log('✅ [REGISTER] Iniciando validação do formulário...');
+    const isValid = validateRegisterForm(formData);
+    console.log('📊 [REGISTER] Resultado da validação:', isValid);
+    console.log('🚨 [REGISTER] Erros após validação:', JSON.stringify(errors, null, 2));
+
+    if (!isValid) {
+      console.log('❌ [REGISTER] Validação falhou! Coletando mensagens de erro...');
+      const errorMessages = Object.values(errors).join('\n');
+      console.log('📝 [REGISTER] Mensagens de erro coletadas:', errorMessages);
+      
+      if (errorMessages) {
+        console.log('🔔 [REGISTER] Exibindo alert de erro de validação');
+        Alert.alert('Erro de Validação', errorMessages);
+      } else {
+        console.log('⚠️ [REGISTER] Nenhuma mensagem de erro encontrada, mas validação falhou');
+      }
       return;
     }
 
+    console.log('✅ [REGISTER] Validação passou! Preparando dados para API...');
+    
+    // Dados que serão enviados para a API
+    const apiData = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      date_of_birth: formData.dateOfBirth,
+    };
+    console.log('📤 [REGISTER] Dados que serão enviados para API:', JSON.stringify(apiData, null, 2));
+
     try {
+      console.log('🌐 [REGISTER] Chamando função register do AuthContext...');
+      console.log('⏳ [REGISTER] Estado de loading antes da chamada:', isLoading);
+      
       await register(formData);
+      
+      console.log('🎉 [REGISTER] Registro realizado com sucesso!');
       Alert.alert(
         'Sucesso!', 
         'Conta criada com sucesso. Faça login para continuar.',
         [
           {
             text: 'OK',
-            onPress: () => router.push('./login')
+            onPress: () => {
+              console.log('🔄 [REGISTER] Navegando para tela de login...');
+              router.push('./login');
+            }
           }
         ]
       );
     } catch (error) {
-      Alert.alert('Erro', error instanceof Error ? error.message : 'Erro desconhecido');
+      console.log('💥 [REGISTER] Erro capturado no componente:', error);
+      console.log('📋 [REGISTER] Tipo do erro:', typeof error);
+      console.log('🔍 [REGISTER] Propriedades do erro:', Object.keys(error || {}));
+      
+      if (error instanceof Error) {
+        console.log('📝 [REGISTER] Mensagem do erro (Error instance):', error.message);
+        console.log('📚 [REGISTER] Stack trace:', error.stack);
+      } else {
+        console.log('📝 [REGISTER] Erro não é instância de Error:', error);
+      }
+
+      // Usar getErrorMessage para garantir que a mensagem seja uma string
+      const errorMessage = getErrorMessage(error, 'Erro ao criar conta. Tente novamente.');
+      console.log('🔧 [REGISTER] Mensagem processada pelo getErrorMessage:', errorMessage);
+      
+      console.log('🔔 [REGISTER] Exibindo alert de erro');
+      Alert.alert('Erro', errorMessage);
     }
   };
 
   const handleLogin = () => {
+    console.log('🔄 [REGISTER] Navegando para tela de login...');
     router.push('./login');
   };
 
@@ -82,8 +139,16 @@ export default function RegisterScreen() {
 
   const handleDateChange = (value: string) => {
     const formattedDate = formatDateInput(value);
+    console.log(`📅 [REGISTER] Data formatada: "${value}" -> "${formattedDate}"`);
     handleInputChange('dateOfBirth', formattedDate);
   };
+
+  // Log do estado atual quando o componente renderiza
+  console.log('🎨 [REGISTER] Renderizando componente. Estado atual:', {
+    formData,
+    errors,
+    isLoading
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -104,7 +169,7 @@ export default function RegisterScreen() {
               placeholder="João Silva"
               value={formData.name}
               onChangeText={(value) => handleInputChange('name', value)}
-              error={errors.name} // Mudança: era errors.fullName
+              error={errors.name}
               autoCapitalize="words"
               autoComplete="name"
             />
@@ -118,14 +183,6 @@ export default function RegisterScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
-            />
-
-            <CustomInput
-              label="Telefone (Opcional)"
-              placeholder="(11) 99999-9999"
-              value={formData.mobileNumber || ''}
-              onChangeText={(value) => handleInputChange('mobileNumber', value)}
-              keyboardType="phone-pad"
             />
 
             <CustomInput
