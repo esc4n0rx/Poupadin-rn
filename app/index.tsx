@@ -18,7 +18,8 @@ export default function Index() {
     // Verificar se já estamos navegando para evitar loops
     const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
-    const inBudgetSetup = segments[0] === 'budget-setup';
+    // ✅ CORREÇÃO: Agora budget-setup está no grupo (setup)
+    const inSetupGroup = segments[0] === '(setup)' || segments[0] === 'budget-setup';
 
     console.log(`🧭 [INDEX] Estado atual:`, {
       user: !!user,
@@ -27,7 +28,7 @@ export default function Index() {
       segments,
       inAuthGroup,
       inTabsGroup,
-      inBudgetSetup
+      inSetupGroup
     });
 
     // Se não há usuário logado e não estamos no grupo de auth
@@ -37,8 +38,8 @@ export default function Index() {
       return;
     }
 
-    // Se há usuário mas setup não foi completado e não estamos no budget-setup
-    if (user && !setupCompleted && !inBudgetSetup) {
+    // ✅ CORREÇÃO: Se há usuário mas setup não foi completado e não estamos no setup
+    if (user && !setupCompleted && !inSetupGroup) {
       console.log(`🔄 [INDEX] Redirecionando para budget-setup (setup incompleto)`);
       router.replace('/budget-setup');
       return;

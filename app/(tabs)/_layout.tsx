@@ -5,7 +5,7 @@ import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated'
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { COLORS, SIZES } from '@/constants/Theme';
+import { COLORS } from '@/constants/Theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
@@ -83,7 +83,8 @@ export default function TabLayout() {
       return;
     }
 
-    // Se há usuário mas setup não foi completado e estamos nas tabs
+    // ✅ CORREÇÃO: Só redirecionar se há usuário, setup não foi completado e estamos nas tabs
+    // Agora que budget-setup está fora do grupo (tabs), não vai mais dar loop
     if (user && !setupCompleted && inTabsGroup) {
       console.log(`🔄 [TABS_LAYOUT] Redirecionando para budget-setup (setup incompleto)`);
       router.replace('/budget-setup');
@@ -91,8 +92,17 @@ export default function TabLayout() {
     }
   }, [user, setupCompleted, isLoading, segments]);
 
-  // Mostrar loading se ainda estiver carregando ou se está redirecionando
-  if (isLoading || !user || !setupCompleted) {
+  // Mostrar loading se ainda estiver carregando
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  // ✅ CORREÇÃO: Se usuário não completou setup, mostrar loading até redirecionamento
+  if (!user || !setupCompleted) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -166,12 +176,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="budget-setup"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }
@@ -183,75 +187,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
-  tabBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
-    backgroundColor: COLORS.white,
-    borderRadius: SIZES.radiusLarge,
-    height: 70,
-    borderTopWidth: 0,
-    elevation: 10,
-    shadowColor: COLORS.black,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    paddingBottom: 0,
-  },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 4,
-    marginBottom: 8,
-  },
   iconWrapper: {
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
+    position: 'relative',
     alignItems: 'center',
-    borderRadius: 25,
+    justifyContent: 'center',
   },
   activeIndicator: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
-    borderRadius: 25,
-    opacity: 0.15,
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.success,
+    top: -2,
+    right: -2,
   },
   iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
   customButtonWrapper: {
-    top: -15,
+    top: -20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   customButton: {
-    width: 65,
-    height: 65,
-    borderRadius: 32.5,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
     shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
   customButtonInner: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    backgroundColor: COLORS.primary,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 28,
+  },
+  tabBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.white,
+    height: 85,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 35,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.inputBorder,
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+  tabBarLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
   },
 });

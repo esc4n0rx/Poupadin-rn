@@ -1,4 +1,4 @@
-// app/(tabs)/budget-setup.tsx
+// app/(setup)/budget-setup.tsx
 import { CategoryForm } from '@/components/CategoryForm';
 import { CustomButton } from '@/components/CustomButton';
 import { CustomStatusBar } from '@/components/CustomStatusBar';
@@ -11,14 +11,14 @@ import { getErrorMessage } from '@/utils/errorHandler';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -101,7 +101,6 @@ export default function BudgetSetupScreen() {
         {
           text: 'OK',
           onPress: async () => {
-            // ✅ CORREÇÃO: Passando `true` para a função `updateSetupStatus`.
             await updateSetupStatus(true);
             router.replace('/(tabs)');
           },
@@ -166,60 +165,51 @@ export default function BudgetSetupScreen() {
       case 3:
         return (
           <View style={styles.summaryContainer}>
-            <Text style={styles.summaryTitle}>Resumo do Orçamento</Text>
-
+            <Text style={styles.summaryTitle}>Resumo do seu Orçamento</Text>
+            
             <View style={styles.summarySection}>
-              <Text style={styles.sectionTitle}>💰 Rendas ({incomes.length})</Text>
+              <Text style={styles.sectionTitle}>Rendas</Text>
               {incomes.map((income, index) => (
                 <View key={index} style={styles.summaryItem}>
                   <Text style={styles.summaryItemLabel}>{income.description}</Text>
-                  <Text style={styles.summaryItemValue}>
-                    {income.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </Text>
+                  <Text style={styles.summaryItemValue}>R$ {income.amount.toFixed(2)}</Text>
                 </View>
               ))}
             </View>
 
             <View style={styles.summarySection}>
-              <Text style={styles.sectionTitle}>📊 Categorias ({categories.length})</Text>
+              <Text style={styles.sectionTitle}>Categorias</Text>
               {categories.map((category, index) => (
                 <View key={index} style={styles.summaryItem}>
                   <View style={styles.categoryRow}>
                     <View style={[styles.colorDot, { backgroundColor: category.color }]} />
                     <Text style={styles.summaryItemLabel}>{category.name}</Text>
                   </View>
-                  <Text style={styles.summaryItemValue}>
-                    {category.allocated_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </Text>
+                  <Text style={styles.summaryItemValue}>R$ {category.allocated_amount.toFixed(2)}</Text>
                 </View>
               ))}
             </View>
 
             <View style={styles.totalBox}>
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Renda Total:</Text>
+                <Text style={styles.totalLabel}>Total de Renda:</Text>
                 <Text style={[styles.totalValue, { color: COLORS.success }]}>
-                  {totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  R$ {totalIncome.toFixed(2)}
                 </Text>
               </View>
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total Alocado:</Text>
-                <Text style={[styles.totalValue, { color: COLORS.error }]}>
-                  {totalAllocated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                <Text style={[styles.totalValue, { color: COLORS.primary }]}>
+                  R$ {totalAllocated.toFixed(2)}
                 </Text>
               </View>
               <View style={[styles.totalRow, styles.remainingRow]}>
-                <Text style={styles.totalLabel}>Sobra/Falta:</Text>
-                <Text
-                  style={[
-                    styles.totalValue,
-                    { color: totalIncome - totalAllocated >= 0 ? COLORS.success : COLORS.error },
-                  ]}
-                >
-                  {(totalIncome - totalAllocated).toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
+                <Text style={styles.totalLabel}>Restante:</Text>
+                <Text style={[
+                  styles.totalValue, 
+                  { color: totalIncome - totalAllocated >= 0 ? COLORS.success : COLORS.error }
+                ]}>
+                  R$ {(totalIncome - totalAllocated).toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -227,7 +217,7 @@ export default function BudgetSetupScreen() {
             {totalAllocated > totalIncome && (
               <View style={styles.warningBox}>
                 <Text style={styles.warningText}>
-                  ⚠️ Atenção: Você alocou mais dinheiro do que sua renda total!
+                  ⚠️ O valor alocado excede sua renda total
                 </Text>
               </View>
             )}
@@ -239,27 +229,24 @@ export default function BudgetSetupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
+    <KeyboardAvoidingView 
+      style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <CustomStatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
-
+      
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.headerTitle}>Configurar Orçamento</Text>
-        <Text style={styles.headerSubtitle}>{getStepTitle()}</Text>
+        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
+        <Text style={styles.headerSubtitle}>
+          {currentStep === 1 && 'Vamos começar definindo suas fontes de renda'}
+          {currentStep === 2 && 'Agora vamos criar suas categorias de gastos'}
+          {currentStep === 3 && 'Revise todas as informações antes de finalizar'}
+        </Text>
         {renderStepIndicator()}
       </View>
 
       <View style={styles.content}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-        >
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
             {renderStepContent()}
           </Animated.View>
@@ -275,7 +262,6 @@ export default function BudgetSetupScreen() {
                 style={styles.backButton}
               />
             )}
-
             {currentStep < 3 ? (
               <CustomButton
                 title="Próximo"
