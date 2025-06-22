@@ -1,4 +1,3 @@
-// components/CustomTabBar.tsx
 import { COLORS, SIZES } from '@/constants/Theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
@@ -58,7 +57,8 @@ export const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarPro
           };
 
           const iconName = ICON_MAPPING[route.name] || 'help-outline';
-          const color = isFocused ? COLORS.primary : COLORS.gray;
+          const iconColor = isFocused ? COLORS.primary : COLORS.black;
+          const textColor = isFocused ? COLORS.primary : COLORS.black;
 
           if (isCenterButton) {
             return (
@@ -88,8 +88,8 @@ export const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarPro
               onLongPress={onLongPress}
               style={styles.tabButton}
             >
-              <IconSymbol name={iconName} size={24} color={color} />
-              <Text style={[styles.tabLabel, { color }]}>{label}</Text>
+              <IconSymbol name={iconName} size={24} color={iconColor} />
+              <Text style={[styles.tabLabel, { color: textColor }]}>{label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -148,5 +148,7 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 10,
     marginTop: 4,
+    fontWeight: '600',
   },
 });
+         
