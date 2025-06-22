@@ -1,4 +1,4 @@
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
@@ -59,19 +59,39 @@ const CustomTabBarButton: React.FC<CustomTabBarButtonProps> = ({ children, onPre
 export default function TabLayout() {
   const { user, setupCompleted, isLoading } = useAuth();
   const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
+    // Não fazer nada se ainda estiver carregando
     if (isLoading) return;
-    if (!user) {
+
+    // Verificar se estamos nas tabs
+    const inTabsGroup = segments[0] === '(tabs)';
+
+    console.log(`🧭 [TABS_LAYOUT] Estado:`, {
+      user: !!user,
+      setupCompleted,
+      isLoading,
+      segments,
+      inTabsGroup
+    });
+
+    // Se não há usuário e estamos nas tabs, redirecionar
+    if (!user && inTabsGroup) {
+      console.log(`🔄 [TABS_LAYOUT] Redirecionando para auth (usuário não logado)`);
       router.replace('/(auth)/welcome');
       return;
     }
-    if (!setupCompleted) {
+
+    // Se há usuário mas setup não foi completado e estamos nas tabs
+    if (user && !setupCompleted && inTabsGroup) {
+      console.log(`🔄 [TABS_LAYOUT] Redirecionando para budget-setup (setup incompleto)`);
       router.replace('/budget-setup');
       return;
     }
-  }, [user, setupCompleted, isLoading, router]);
+  }, [user, setupCompleted, isLoading, segments]);
 
+  // Mostrar loading se ainda estiver carregando ou se está redirecionando
   if (isLoading || !user || !setupCompleted) {
     return (
       <View style={styles.loadingContainer}>
@@ -97,18 +117,18 @@ export default function TabLayout() {
           title: 'Início',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
-              <IconSymbol name="house.fill" size={24} color={color} />
+              <IconSymbol size={24} name="house" color={color} />
             </ActiveTabIcon>
           ),
         }}
       />
       <Tabs.Screen
-        name="stats"
+        name="budget"
         options={{
-          title: 'Objetivos',
+          title: 'Orçamento',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
-              <IconSymbol name="chart.bar.fill" size={24} color={color} />
+              <IconSymbol size={24} name="chart.pie" color={color} />
             </ActiveTabIcon>
           ),
         }}
@@ -117,25 +137,20 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: '',
-          tabBarLabel: () => null,
-          tabBarIcon: () => (
-            <IconSymbol name="arrow.up.arrow.down" size={28} color={COLORS.white} />
-          ),
           tabBarButton: (props) => (
-            <CustomTabBarButton
-              {...props}
-              onPress={() => router.push('/(tabs)/explore')}
-            />
+            <CustomTabBarButton onPress={() => router.push('/explore')}>
+              <IconSymbol size={28} name="plus" color={COLORS.white} />
+            </CustomTabBarButton>
           ),
         }}
       />
       <Tabs.Screen
-        name="wallet"
+        name="goals"
         options={{
-          title: 'Categorias',
+          title: 'Metas',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
-              <IconSymbol name="wallet.pass.fill" size={24} color={color} />
+              <IconSymbol size={24} name="target" color={color} />
             </ActiveTabIcon>
           ),
         }}
@@ -146,7 +161,7 @@ export default function TabLayout() {
           title: 'Perfil',
           tabBarIcon: ({ color, focused }) => (
             <ActiveTabIcon focused={focused}>
-              <IconSymbol name="person.fill" size={24} color={color} />
+              <IconSymbol size={24} name="person" color={color} />
             </ActiveTabIcon>
           ),
         }}

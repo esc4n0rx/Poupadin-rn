@@ -34,11 +34,27 @@ export interface User {
 
 export interface LoginResponse {
   message: string;
-  token: string;
+  accessToken: string;  // Alterado de 'token' para 'accessToken'
+  refreshToken: string; // Adicionado refresh token
   user: User;
 }
 
 export interface RegisterResponse {
   message: string;
   user: User;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  instruction: string;
+}
+
+export interface VerifyResetCodeResponse {
+  message: string;
+  valid: boolean;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+  success: boolean;
 }

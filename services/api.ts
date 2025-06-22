@@ -9,6 +9,8 @@ export interface ApiResponse<T = any> {
 }
 
 export interface LoginResponse {
+  refreshToken: any;
+  accessToken: any;
   message: string;
   token: string;
   user: {

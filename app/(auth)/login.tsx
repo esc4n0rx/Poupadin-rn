@@ -46,7 +46,20 @@ export default function LoginScreen() {
       await login(formData);
       router.replace('/(tabs)');
     } catch (error) {
-      Alert.alert('Erro', error instanceof Error ? error.message : 'Erro desconhecido');
+      console.error('❌ [LOGIN_SCREEN] Erro no login:', error);
+      
+      let errorMessage = 'Erro desconhecido';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Tratar erro específico do SecureStore
+        if (errorMessage.includes('SecureStore') || errorMessage.includes('Invalid value')) {
+          errorMessage = 'Erro interno do aplicativo. Tente fazer login novamente.';
+        }
+      }
+      
+      Alert.alert('Erro no Login', errorMessage);
     }
   };
 
@@ -252,7 +265,7 @@ const styles = StyleSheet.create({
   },
   signUpTextLink: {
     fontSize: SIZES.body3,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
+   color: COLORS.primary,
+   fontWeight: '600',
+ },
 });

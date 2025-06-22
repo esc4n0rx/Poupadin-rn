@@ -2,31 +2,57 @@
 import { CustomStatusBar } from '@/components/CustomStatusBar';
 import { COLORS } from '@/constants/Theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function Index() {
   const router = useRouter();
+  const segments = useSegments();
   const { user, setupCompleted, isLoading } = useAuth();
 
   useEffect(() => {
+    // Não fazer nada se ainda estiver carregando
     if (isLoading) return;
 
-    const timer = setTimeout(() => {
-      if (user) {
-        if (setupCompleted) {
-          router.replace('/(tabs)');
-        } else {
-          router.replace('/budget-setup');
-        }
-      } else {
-        router.replace('/(auth)/welcome');
-      }
-    }, 1000);
+    // Verificar se já estamos navegando para evitar loops
+    const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
+    const inBudgetSetup = segments[0] === 'budget-setup';
 
-    return () => clearTimeout(timer);
-  }, [user, setupCompleted, isLoading, router]);
+    console.log(`🧭 [INDEX] Estado atual:`, {
+      user: !!user,
+      setupCompleted,
+      isLoading,
+      segments,
+      inAuthGroup,
+      inTabsGroup,
+      inBudgetSetup
+    });
+
+    // Se não há usuário logado e não estamos no grupo de auth
+    if (!user && !inAuthGroup) {
+      console.log(`🔄 [INDEX] Redirecionando para welcome (não logado)`);
+      router.replace('/(auth)/welcome');
+      return;
+    }
+
+    // Se há usuário mas setup não foi completado e não estamos no budget-setup
+    if (user && !setupCompleted && !inBudgetSetup) {
+      console.log(`🔄 [INDEX] Redirecionando para budget-setup (setup incompleto)`);
+      router.replace('/budget-setup');
+      return;
+    }
+
+    // Se há usuário e setup foi completado mas não estamos nas tabs
+    if (user && setupCompleted && !inTabsGroup) {
+      console.log(`🔄 [INDEX] Redirecionando para tabs (logado e setup completo)`);
+      router.replace('/(tabs)');
+      return;
+    }
+
+    console.log(`✅ [INDEX] Navegação já está no lugar correto`);
+  }, [user, setupCompleted, isLoading, segments]);
 
   return (
     <View style={{ 
